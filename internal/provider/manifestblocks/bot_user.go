@@ -18,6 +18,13 @@ type BotUser struct {
 	AlwaysOnline types.Bool   `tfsdk:"always_online"`
 }
 
+func (u BotUser) Read() manifest.BotUser {
+	return manifest.BotUser{
+		DisplayName:  u.DisplayName.ValueString(),
+		AlwaysOnline: u.AlwaysOnline.ValueBoolPointer(),
+	}
+}
+
 //declscope:shared // features.go nests this block
 func (*BotUser) schema() *schema.SingleNestedBlock {
 	return &schema.SingleNestedBlock{
@@ -44,12 +51,5 @@ func (*BotUser) schema() *schema.SingleNestedBlock {
 				path.MatchRelative().AtName("display_name"),
 			),
 		},
-	}
-}
-
-func (u BotUser) Read() manifest.BotUser {
-	return manifest.BotUser{
-		DisplayName:  u.DisplayName.ValueString(),
-		AlwaysOnline: u.AlwaysOnline.ValueBoolPointer(),
 	}
 }

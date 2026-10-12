@@ -16,6 +16,14 @@ type Interactivity struct {
 	MessageMenuOptionsURL types.String `tfsdk:"message_menu_options_url"`
 }
 
+func (i Interactivity) Read() manifest.Interactivity {
+	return manifest.Interactivity{
+		IsEnabled:             i.IsEnabled.ValueBool(),
+		RequestURL:            i.RequestURL.ValueStringPointer(),
+		MessageMenuOptionsURL: i.MessageMenuOptionsURL.ValueStringPointer(),
+	}
+}
+
 //declscope:shared // settings.go nests this block
 func (*Interactivity) schema() *schema.SingleNestedBlock {
 	return &schema.SingleNestedBlock{
@@ -39,13 +47,5 @@ func (*Interactivity) schema() *schema.SingleNestedBlock {
 				path.MatchRelative().AtName("is_enabled"),
 			),
 		},
-	}
-}
-
-func (i Interactivity) Read() manifest.Interactivity {
-	return manifest.Interactivity{
-		IsEnabled:             i.IsEnabled.ValueBool(),
-		RequestURL:            i.RequestURL.ValueStringPointer(),
-		MessageMenuOptionsURL: i.MessageMenuOptionsURL.ValueStringPointer(),
 	}
 }

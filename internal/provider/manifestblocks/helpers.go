@@ -16,6 +16,25 @@ type model[T any] interface {
 	Read() T
 }
 
+func MapOptionModel[T any, M model[T]](model *M) *T {
+	return mapOption[M, T](
+		model, func(m M) T {
+			return m.Read()
+		},
+	)
+}
+
+//declscope:private // only MapOptionModel above uses it
+func mapOption[T, U any](value *T, fn func(T) U) *U {
+	if value == nil {
+		return nil
+	}
+
+	v := fn(*value)
+
+	return &v
+}
+
 func int64PtrAsIntPtr(ptr *int64) *int {
 	if ptr == nil {
 		return nil
@@ -37,25 +56,6 @@ func mapListModel[T any, M model[T]](model []M) []T {
 	}
 
 	return read
-}
-
-//declscope:private // only mapOptionModel below uses it
-func mapOption[T, U any](value *T, fn func(T) U) *U {
-	if value == nil {
-		return nil
-	}
-
-	v := fn(*value)
-
-	return &v
-}
-
-func MapOptionModel[T any, M model[T]](model *M) *T {
-	return mapOption[M, T](
-		model, func(m M) T {
-			return m.Read()
-		},
-	)
 }
 
 func mustStringSetAsArray(setValue *types.Set) []string {

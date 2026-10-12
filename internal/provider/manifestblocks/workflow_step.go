@@ -15,6 +15,13 @@ type WorkflowStep struct {
 	CallbackID types.String `tfsdk:"callback_id"`
 }
 
+func (s WorkflowStep) Read() manifest.WorkflowStep {
+	return manifest.WorkflowStep{
+		Name:       s.Name.ValueString(),
+		CallbackID: s.CallbackID.ValueString(),
+	}
+}
+
 //declscope:shared // features.go nests this block
 func (*WorkflowStep) schema() *schema.ListNestedBlock {
 	return &schema.ListNestedBlock{
@@ -40,12 +47,5 @@ func (*WorkflowStep) schema() *schema.ListNestedBlock {
 		Validators: []validator.List{
 			listvalidator.SizeAtMost(10),
 		},
-	}
-}
-
-func (s WorkflowStep) Read() manifest.WorkflowStep {
-	return manifest.WorkflowStep{
-		Name:       s.Name.ValueString(),
-		CallbackID: s.CallbackID.ValueString(),
 	}
 }

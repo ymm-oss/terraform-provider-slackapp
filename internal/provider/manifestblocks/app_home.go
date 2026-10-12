@@ -13,6 +13,14 @@ type AppHome struct {
 	MessagesTabReadOnlyEnabled types.Bool `tfsdk:"messages_tab_read_only_enabled"`
 }
 
+func (h AppHome) Read() manifest.AppHome {
+	return manifest.AppHome{
+		HomeTabEnabled:             h.HomeTabEnabled.ValueBoolPointer(),
+		MessagesTabEnabled:         h.MessagesTabEnabled.ValueBoolPointer(),
+		MessagesTabReadOnlyEnabled: h.MessagesTabReadOnlyEnabled.ValueBoolPointer(),
+	}
+}
+
 //declscope:shared // features.go nests this block
 func (*AppHome) schema() *schema.SingleNestedBlock {
 	return &schema.SingleNestedBlock{
@@ -31,13 +39,5 @@ func (*AppHome) schema() *schema.SingleNestedBlock {
 				Optional:            true,
 			},
 		},
-	}
-}
-
-func (h AppHome) Read() manifest.AppHome {
-	return manifest.AppHome{
-		HomeTabEnabled:             h.HomeTabEnabled.ValueBoolPointer(),
-		MessagesTabEnabled:         h.MessagesTabEnabled.ValueBoolPointer(),
-		MessagesTabReadOnlyEnabled: h.MessagesTabReadOnlyEnabled.ValueBoolPointer(),
 	}
 }
