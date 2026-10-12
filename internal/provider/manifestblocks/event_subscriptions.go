@@ -15,6 +15,14 @@ type EventSubscriptions struct {
 	UserEvents types.Set    `tfsdk:"user_events"`
 }
 
+func (s EventSubscriptions) Read() manifest.EventSubscriptions {
+	return manifest.EventSubscriptions{
+		RequestURL: s.RequestURL.ValueStringPointer(),
+		BotEvents:  mustStringSetAsArray(&s.BotEvents),
+		UserEvents: mustStringSetAsArray(&s.UserEvents),
+	}
+}
+
 //declscope:shared // settings.go nests this block
 func (*EventSubscriptions) schema() *schema.SingleNestedBlock {
 	return &schema.SingleNestedBlock{
@@ -41,13 +49,5 @@ func (*EventSubscriptions) schema() *schema.SingleNestedBlock {
 				},
 			},
 		},
-	}
-}
-
-func (s EventSubscriptions) Read() manifest.EventSubscriptions {
-	return manifest.EventSubscriptions{
-		RequestURL: s.RequestURL.ValueStringPointer(),
-		BotEvents:  mustStringSetAsArray(&s.BotEvents),
-		UserEvents: mustStringSetAsArray(&s.UserEvents),
 	}
 }

@@ -14,6 +14,13 @@ type Scopes struct {
 	User types.Set `tfsdk:"user"`
 }
 
+func (s Scopes) Read() manifest.Scopes {
+	return manifest.Scopes{
+		Bot:  mustStringSetAsArray(&s.Bot),
+		User: mustStringSetAsArray(&s.User),
+	}
+}
+
 //declscope:shared // oauth_config.go nests this block
 func (*Scopes) schema() *schema.SingleNestedBlock {
 	return &schema.SingleNestedBlock{
@@ -36,12 +43,5 @@ func (*Scopes) schema() *schema.SingleNestedBlock {
 				},
 			},
 		},
-	}
-}
-
-func (s Scopes) Read() manifest.Scopes {
-	return manifest.Scopes{
-		Bot:  mustStringSetAsArray(&s.Bot),
-		User: mustStringSetAsArray(&s.User),
 	}
 }

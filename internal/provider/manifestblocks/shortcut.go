@@ -17,6 +17,15 @@ type Shortcut struct {
 	Type        types.String `tfsdk:"type"`
 }
 
+func (s Shortcut) Read() manifest.Shortcut {
+	return manifest.Shortcut{
+		Name:        s.Name.ValueString(),
+		CallbackID:  s.CallbackID.ValueString(),
+		Description: s.Description.ValueString(),
+		Type:        manifest.ShortcutType(s.Type.ValueString()),
+	}
+}
+
 //declscope:shared // features.go nests this block
 func (*Shortcut) schema() *schema.ListNestedBlock {
 	return &schema.ListNestedBlock{
@@ -53,14 +62,5 @@ func (*Shortcut) schema() *schema.ListNestedBlock {
 		Validators: []validator.List{
 			validators.MessageShortcutCount(),
 		},
-	}
-}
-
-func (s Shortcut) Read() manifest.Shortcut {
-	return manifest.Shortcut{
-		Name:        s.Name.ValueString(),
-		CallbackID:  s.CallbackID.ValueString(),
-		Description: s.Description.ValueString(),
-		Type:        manifest.ShortcutType(s.Type.ValueString()),
 	}
 }

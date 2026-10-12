@@ -20,6 +20,16 @@ type SlashCommand struct {
 	UsageHint    types.String `tfsdk:"usage_hint"`
 }
 
+func (c SlashCommand) Read() manifest.SlashCommand {
+	return manifest.SlashCommand{
+		Command:      c.Command.ValueString(),
+		Description:  c.Description.ValueString(),
+		ShouldEscape: c.ShouldEscape.ValueBoolPointer(),
+		URL:          c.URL.ValueStringPointer(),
+		UsageHint:    c.UsageHint.ValueStringPointer(),
+	}
+}
+
 //declscope:shared // features.go nests this block
 func (*SlashCommand) schema() *schema.ListNestedBlock {
 	return &schema.ListNestedBlock{
@@ -61,15 +71,5 @@ func (*SlashCommand) schema() *schema.ListNestedBlock {
 		Validators: []validator.List{
 			validators.CommandCount(),
 		},
-	}
-}
-
-func (c SlashCommand) Read() manifest.SlashCommand {
-	return manifest.SlashCommand{
-		Command:      c.Command.ValueString(),
-		Description:  c.Description.ValueString(),
-		ShouldEscape: c.ShouldEscape.ValueBoolPointer(),
-		URL:          c.URL.ValueStringPointer(),
-		UsageHint:    c.UsageHint.ValueStringPointer(),
 	}
 }

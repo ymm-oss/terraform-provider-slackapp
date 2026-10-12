@@ -3,14 +3,14 @@ name: declscope-authoring
 description: "Write or change Go code in a repository that runs declscope, which shows as a .declscope.y*ml or baseline file, //declscope: comments, or declscope in CI. Read this before adding, naming or moving a declaration, a helper that several files use, or a test. Read it too before splitting a file, writing a //declscope: directive, or acting on a declscope diagnostic. Covers where code belongs, naming it accurately, and fixes that hide a problem."
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.20.1
-x-embedded-at: "2026-10-06T21:48:50Z"
-x-embedded-digest: "sha256:b44421c7b002b2040c900ae319441c8fa4a3610da5320a281f22162e5d851581"
+x-embedded-version: 0.20.4
+x-embedded-at: "2026-10-12T12:30:55Z"
+x-embedded-digest: "sha256:46b7e046d13c138578cde94b3ef81980531d06535e8100a211edb07edff9bdad"
 ---
 
 # Writing code under declscope
 
-Written against **declscope 0.20.1**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.20.4**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 This skill is for everyday work in a repository that already runs declscope. Introducing it, choosing its configuration, and clearing a baseline are in [declscope-adoption](../declscope-adoption/SKILL.md), installed beside this one. What each directive and config key means is in [the README](https://github.com/mpyw/declscope#readme).
 
@@ -187,7 +187,7 @@ When another namespace uses a struct, give each field the smallest scope it need
 
 **Do not restate the type's scope on a field.** It binds nothing and is reported as unused.
 
-**Put the private fields last.** The fields other files read are the struct's interface, so they come first:
+**Put the private fields last,** as [Order by reach](#order-by-reach) says. The fields other files read are the struct's interface, so they come first:
 
 ```go
 // callee is a resolved call target.
@@ -205,15 +205,6 @@ type callee struct {
 }
 ```
 
-Do not reorder fields where the order is observable. Add the directives in place instead:
-
-| Order is observable through | Effect |
-| --- | --- |
-| Unkeyed composite literals | `callee{f, in, fn}` binds by position |
-| Positional or binary encodings | The wire format follows the field order |
-| `unsafe` offsets | `unsafe.Offsetof` changes |
-| 64-bit atomics | They rely on first-word alignment on 32-bit platforms |
-
 Under `surplus: strict`, declscope reports each field no other namespace reads. Where `surplus` is off or stands down, find them by hand. Mark every field `//declscope:private`. Then delete the directive from each field reported as used from another namespace.
 
 **A type nobody else spells needs no directive.** If callers only get it from a constructor, `//declscope:shared` on it is reported:
@@ -224,6 +215,72 @@ Under `surplus: strict`, declscope reports each field no other namespace reads. 
 
 Keep that type and its fields private. Expose small shared functions that return what callers need.
 
+## Order by reach
+
+**Order declarations from the widest reach to the narrowest.** A reader meets the file's interface first: what other packages use, then what other files use, then how it works. declscope does not check this order. It is a convention for code you write.
+
+| Reach | Declarations |
+| --- | --- |
+| 1. Other packages | Exported, and not `private` |
+| 2. Other files of the package | Unexported, and `shared` by any directive in force: its own, its block's, its type's or the file's |
+| 3. Its own namespace | `private`, exported or not |
+
+Scope decides the reach, not the case of the first letter. An exported declaration marked `//declscope:private` goes with the private ones, since its author said no other file uses it.
+
+**Order only inside a sequence the file already has.** Keep the order of kinds. Within each reach, keep the existing order, so declarations that sit together stay together.
+
+**A type and the constructors and methods right after it are one unit.** Move the unit as a whole, at the type's reach. Do not move the type out alone, and do not move another declaration into the unit. Inside it, the type comes first, then its constructors, then its methods, each ordered by reach.
+
+| Sequence | Order by reach |
+| --- | --- |
+| The fields of a struct, the methods of an interface | Yes |
+| A run of adjacent declarations of one kind, such as consecutive functions or one `const` block | Yes |
+| A run of type units | Yes, each unit as a whole |
+| The constructors of a unit, and separately its methods | Yes, inside the unit |
+| Declarations of different kinds | No. Do not move a declaration past one of another kind |
+| Sections marked by a comment, such as `// ===` or `// Param Types` | No. Order inside each section |
+
+**A private helper may stay right after its users.** When the declarations that use it sit next to each other, put it directly after the last of them, or after another helper already placed there. Reading from the top then follows the calls. A helper whose users are spread through the file goes in reach order.
+
+```go
+func Resolve(dir, explicit string) (Options, error) { ... }
+
+func ResolveForBaseline(dir, explicit string) (Options, string, error) { ... }
+
+// resolve is used only by the two above, so it stays after them.
+func resolve(dir, explicit string) (Options, string, error) { ... }
+
+func Find(dir string) string { ... }
+```
+
+Fields have no such exception. A private field goes after the shared ones, even the field the struct is built around.
+
+Do not reorder where the order is observable:
+
+| Order is observable through | Effect |
+| --- | --- |
+| `iota`, or a `const` spec with its expression omitted | Each value follows its position |
+| Unkeyed composite literals | `callee{f, in, fn}` binds fields by position |
+| Positional or binary encodings | The wire format follows the field order |
+| `unsafe` offsets | `unsafe.Offsetof` changes |
+| 64-bit atomics | They rely on first-word alignment on 32-bit platforms |
+| Package-level `var` initializers with side effects and no dependencies between them | They run in declaration order |
+| Several `init` functions in one file | They run in source order |
+
+**Keep an order the reader relies on.** Some orders change nothing for the compiler but still say something. Keep these as you would an observable order:
+
+- Steps listed in the order they run.
+- Values that follow an outside order, such as a page's layout or a protocol's fields.
+- A comment that introduces the declarations after it. Move it with them, or leave the group in place.
+
+When you are unsure, leave the sequence and say so in your report.
+
+Where the repository's linters fix an order, such as `decorder` or `funcorder`, follow them first. `funcorder`'s exported-before-unexported methods is the same direction, so order by reach inside it.
+
+Test files and generated files are out of scope. `TestXxx` functions are exported but called by nobody.
+
+**When your change moves a declaration to another reach, move the declaration too.** That is the default, for a new `//declscope:shared`, a `//declscope:private` from `surplus`, or a name `shrink` unexported. Say in your report that you moved it: the move makes the diff larger, and the owner may prefer it in place. Do not reorder declarations your change does not touch.
+
 ## Acting on a diagnostic your change caused
 
 **A boundary report points at the declaration you reached, not at your code.** Your use is listed under it as `used here, in namespace ...`. A directive or an ignore that answers it goes on the declaration.
@@ -232,7 +289,7 @@ Keep that type and its fields private. Expose small shared functions that return
 | --- | --- | --- |
 | `X is private to namespace "a"` (or `to the core namespace`), `but is used from namespace "b"`, or `X is declared private by ...` | Should your code live beside `X`? | Move your code beside `X`. If `X` is shared on purpose and sits in one caller's file, move it to a file named for its concept first. Then write `//declscope:shared // why` on `X`. When `X` states its own `//declscope:private`, that was a decision: move your code, and do not flip the directive |
 | `//declscope:shared on X: no use from another namespace is visible` | Did the use that justified it go away? | Delete the directive |
-| `X takes shared scope from //declscope:shared on Y, but no use ...` | Does any other file read `X`? | Accept `-fix`'s `//declscope:private` on `X`. For a field, move it to the end of the struct |
+| `X takes shared scope from //declscope:shared on Y, but no use ...` | Does any other file read `X`? | Accept `-fix`'s `//declscope:private` on `X`. Move `X` after the declarations of wider reach. See [Order by reach](#order-by-reach) |
 | `unused //declscope:...` | Does the directive still change anything? | Delete it |
 | `X does not carry namespace "a"` | Is the name accurate, and is `X` in the right file? | See [Naming](#naming). Rename only when both answers are yes |
 | `X is exported, but nothing outside ... uses it` (`declscope shrink`) | Does another package really need it? | See [Reading what shrink reports](#reading-what-shrink-reports) |
