@@ -3,14 +3,14 @@ name: declscope-authoring
 description: "Write or change Go code in a repository that runs declscope, which shows as a .declscope.y*ml or baseline file, //declscope: comments, or declscope in CI. Read this before adding, naming or moving a declaration, a helper that several files use, or a test. Read it too before splitting a file, writing a //declscope: directive, or acting on a declscope diagnostic. Covers where code belongs, naming it accurately, and fixes that hide a problem."
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.20.4
-x-embedded-at: "2026-10-12T12:30:55Z"
-x-embedded-digest: "sha256:46b7e046d13c138578cde94b3ef81980531d06535e8100a211edb07edff9bdad"
+x-embedded-version: 0.23.0
+x-embedded-at: "2026-10-22T22:08:20Z"
+x-embedded-digest: "sha256:3da23d1d95368cc164da54830e6826d0a4dd7494a57756319a081502856b6ec7"
 ---
 
 # Writing code under declscope
 
-Written against **declscope 0.20.4**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.23.0**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 This skill is for everyday work in a repository that already runs declscope. Introducing it, choosing its configuration, and clearing a baseline are in [declscope-adoption](../declscope-adoption/SKILL.md), installed beside this one. What each directive and config key means is in [the README](https://github.com/mpyw/declscope#readme).
 
@@ -111,7 +111,7 @@ For example, a cache that two parts of a package read was placed in `surplus.go`
 
 A test file's namespace comes from its own file name: `collect_test.go` is `collect`. So name a test file for the source file whose unexported code it calls, not for the behavior it tests. A test of ordering that calls `collect.go` goes in `collect_test.go`, not `order_test.go`.
 
-The namespace does not follow the subject's `//declscope:namespace`. If `user_extra.go` carries `//declscope:namespace user`, write the same directive on `user_extra_test.go`. A test of a core file joins the core by itself, since `client_test.go` shares `client.go`'s stem.
+The namespace does not follow the subject's `//declscope:namespace`. If `user_extra.go` carries `//declscope:namespace user`, write the same directive on `user_extra_test.go`. A test of a core file joins the core by itself: `client_test.go` joins a core `client.go`. Nothing else joins, so the core takes no GOOS sibling such as `client_linux.go`. A test file with its own `//declscope:namespace` keeps that namespace instead.
 
 | The test calls | Put it |
 | --- | --- |
@@ -314,7 +314,10 @@ Test files and generated files are out of scope. `TestXxx` functions are exporte
 
 - outside `internal/`, and in `package main`;
 - beside assembly or cgo;
-- under an `internal/` that a nested module's path extends, when that module fails to load or reads this one from elsewhere, such as a published version.
+- under an `internal/` whose tree a nested module may import into, when that module fails to load or reads this one from elsewhere, such as a published version;
+- under an `internal/` whose tree a module of the build list may import into, when the build reads that module from elsewhere, such as a published version.
+
+A copy from elsewhere that a nested module builds keeps the reports in its range, but withholds their fixes, and the reason names the copy.
 
 The exit status ignores those packages.
 
