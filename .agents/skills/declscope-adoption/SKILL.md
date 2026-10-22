@@ -3,14 +3,14 @@ name: declscope-adoption
 description: Adopt declscope on an existing Go codebase and drive its diagnostics to zero. Read this when introducing declscope to a repository, when choosing its configuration, when running declscope shrink for the first time, or when clearing a declscope baseline. Covers sizing each rule before enabling it, reading the diagnostics as structure, the remedy for each shape, and the measurement traps that produce false confidence. For writing new code in a repository that already runs declscope, use declscope-authoring.
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.20.4
-x-embedded-at: "2026-10-12T12:30:55Z"
-x-embedded-digest: "sha256:eef784462de49247f44f401c5425ebd0952db19ab9e592e3e13165a1c79d5cc5"
+x-embedded-version: 0.23.0
+x-embedded-at: "2026-10-22T22:08:20Z"
+x-embedded-digest: "sha256:7865717cda173adcc76e4d3df5150243399f226a6233a104bffbf31588543c1d"
 ---
 
 # Adopting declscope
 
-Written against **declscope 0.20.4**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.23.0**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 **Read [the README](https://github.com/mpyw/declscope#readme) before the first decision.** This skill covers what to do about the diagnostics. What each directive means, and what the config accepts, is there.
 
@@ -164,7 +164,7 @@ declscope inspect -format=json <that package> # what shape it is in
 
 Add `-test=false` once the first pass is read. In a large package, most of what crosses is test scaffolding. `export_test.go` reaching internals is what that file is for. It sorts above the crossings worth acting on.
 
-**`survey` refuses to print a count it cannot stand behind.** It stops on a package that does not type-check.
+**`survey` refuses to print a count it cannot stand behind.** It stops on a package that does not type-check, or that imports one that does not.
 
 It reports what was in force before anything else:
 
@@ -172,9 +172,9 @@ It reports what was in force before anything else:
 - whether each rule was on;
 - how many entries a baseline holds.
 
-A rule that was not asked prints `-`, never `0`. That includes a rule that stood itself down. `surplus` does so for a package holding a generated, assembly, cgo or build-excluded file. It does so too under `-test=false` when the package has in-package tests.
+A rule that was not asked prints `-`, never `0`. That includes a rule that stood itself down. `surplus` does so for a package holding a generated, assembly or cgo file, or a build-excluded file of its own package. It does so too under `-test=false` when the package has in-package tests.
 
-`-allow-errors` continues past a package that does not compile. It is named under `type check` and given no row, so nothing in the tables reads as a clean result for it.
+`-allow-errors` continues past a package that does not compile. The `type check` row counts it, a list under the Checks table names it with its first error (or names the failing dependency and its error), and it is given no row, so nothing in the tables reads as a clean result for it.
 
 Do **not** move the baseline aside to measure: `survey` reports `baselined` as its own column, so what is suppressed and what is left are visible at once. Do not count message fragments either; the wording of a diagnostic is not an interface, and the JSON is.
 
@@ -272,7 +272,7 @@ These cost real time. Each was measured, not guessed.
 
 **Measure through `declscope survey`.** Why a bare count misleads, and the bulk-rename trap, are in [Traps](../declscope-authoring/SKILL.md#traps).
 
-**A zero may be the filter, not the code.** A `filter.only` anywhere in the chain can leave a package with nothing to read. A package nothing was read from reports nothing. `declscope` says so only when a nested `only` was cancelled by one above it, so the quiet cases stay quiet. `declscope inspect` lists the files each namespace was built from (`namespaces[].files`); a package whose files are missing from it is one the filter removed.
+**A zero may be the filter, not the code.** A `filter.only` anywhere in the chain can leave a package with nothing to read. A package nothing was read from reports nothing. `declscope` says so only when a nested `only` was cancelled by one above it, so the quiet cases stay quiet. Fix that report in the config chain: a `//declscope:ignore filter` silences nothing, and the `unused` rule reports it. `declscope inspect` lists the files each namespace was built from (`namespaces[].files`); a package whose files are missing from it is one the filter removed.
 
 **A zero from `boundary` may be the switch, not the code.** `rules.boundary: off` silences the rule entirely, and the run looks like a clean repository. Read every config before reporting a count, the same way you would for `qualify`.
 
