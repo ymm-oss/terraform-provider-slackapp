@@ -7,7 +7,7 @@
 go = "1.27.1"
 golangci-lint = "2.14.0"
 "github:hashicorp/terraform-plugin-docs" = "0.25.0"
-"github:mpyw/declscope" = "0.23.0"
+"github:mpyw/declscope" = "0.23.1"
 # The acceptance tests in internal/provider run this terraform.
 terraform = "1.16.5"
 

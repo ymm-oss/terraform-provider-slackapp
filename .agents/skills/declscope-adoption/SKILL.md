@@ -3,14 +3,14 @@ name: declscope-adoption
 description: Adopt declscope on an existing Go codebase and drive its diagnostics to zero. Read this when introducing declscope to a repository, when choosing its configuration, when running declscope shrink for the first time, or when clearing a declscope baseline. Covers sizing each rule before enabling it, reading the diagnostics as structure, the remedy for each shape, and the measurement traps that produce false confidence. For writing new code in a repository that already runs declscope, use declscope-authoring.
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.23.0
-x-embedded-at: "2026-10-22T22:08:20Z"
-x-embedded-digest: "sha256:7865717cda173adcc76e4d3df5150243399f226a6233a104bffbf31588543c1d"
+x-embedded-version: 0.23.1
+x-embedded-at: "2026-10-23T23:01:24Z"
+x-embedded-digest: "sha256:a16770770be4ef1fde6d1aa199b22094dda1eb153a7ede2f7d6d1e852128b1c9"
 ---
 
 # Adopting declscope
 
-Written against **declscope 0.23.0**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.23.1**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 **Read [the README](https://github.com/mpyw/declscope#readme) before the first decision.** This skill covers what to do about the diagnostics. What each directive means, and what the config accepts, is there.
 
@@ -63,6 +63,8 @@ declscope survey -format=json ./... | jq .totals.surplus.found
 ```
 
 An explicit `-config` replaces the repository's own config. Copy its keys in first when measuring a different mode.
+
+**Before `-fix`, read where its `//declscope:private` directives would land.** When most of them fall under one file-level `//declscope:shared`, the file should not be shared as a whole. Delete the file's directive instead, and share the few declarations other files use. See [Directives](../declscope-authoring/SKILL.md#directives).
 
 **Size the default `unused` findings too.** Under `loose`, a `//declscope:private` that names the scope `defaults.unexported` gives is kept, since another default could make it bind. The default `strict` reports it, and one `declscope -fix` run deletes it. When changing `defaults.unexported`, expect reports for directives that restate the new default. If the owner wants to keep those explicit decisions, set `unused: loose`.
 
