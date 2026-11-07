@@ -3,14 +3,14 @@ name: declscope-adoption
 description: Adopt declscope on an existing Go codebase and drive its diagnostics to zero. Read this when introducing declscope to a repository, when choosing its configuration, when running declscope shrink for the first time, or when clearing a declscope baseline. Covers sizing each rule before enabling it, reading the diagnostics as structure, the remedy for each shape, and the measurement traps that produce false confidence. For writing new code in a repository that already runs declscope, use declscope-authoring.
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.24.2
-x-embedded-at: "2026-11-05T22:26:51Z"
-x-embedded-digest: "sha256:f18505e995e9ce41734e28044012b0fbe3e961e0434de31beaf2ae615dfc6e95"
+x-embedded-version: 0.24.3
+x-embedded-at: "2026-11-07T03:14:04Z"
+x-embedded-digest: "sha256:f99d90326a7db71fe55758c24a93d49bd45e47414a9d23156700813056a15885"
 ---
 
 # Adopting declscope
 
-Written against **declscope 0.24.2**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.24.3**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 **Read [the README](https://github.com/mpyw/declscope#readme) before the first decision.** This skill covers what to do about the diagnostics. What each directive means, and what the config accepts, is there.
 
@@ -53,6 +53,8 @@ Each file's patterns are read against **its own** directory, and anchor there wh
 ### Start at the default, and offer the rest
 
 **Ask before any config change**, as [declscope-authoring](../declscope-authoring/SKILL.md#do-not-hide-a-report) says. That includes the first config file. Wait for an answer before changing any code, too.
+
+**When nobody can answer, as in a non-interactive run, do not wait.** Adopt the minimum below, with no config file, and make the changes this skill describes. Say in your report what you chose, and which settings the owner may still want to switch on.
 
 **The minimum is no config file at all.** `boundary`, `surplus: strict` and `unused: strict` are on. They check reach and whether directives still change anything; the naming rule checks a convention. Adopting this much is a complete adoption.
 
@@ -122,7 +124,7 @@ This happened when declscope held itself to `shrink`. The fix unexported twelve 
 | 4. Read what the analyzer now reports | `declscope ./...` |
 | 5. State or move each new crossing | See [What each shape means](#what-each-shape-means) |
 
-Ask before step 2, the same as any other change. The fix renames every identifier naming the declaration, all inside its own package, and the doc comment that opens with the name.
+Ask before step 2, the same as any other change. When nobody can answer, apply the fix if the request allows changing exported names, as a request to clear the findings or to refactor does. `shrink` judges only under `internal/`, so no importer outside the module breaks. Otherwise, baseline what it reports, as the next paragraph says. The fix renames every identifier naming the declaration, all inside its own package, and the doc comment that opens with the name.
 
 **When the owner cannot settle `shrink` yet, baseline it.** `declscope baseline ./...` records `shrink`'s reports with the analyzer's, and `shrink` then passes on them in CI. It is the same deferral as any baseline, and [the same rules](#a-baseline-is-for-arriving-not-for-staying) apply. A repository that does not run `shrink` passes `-shrink=false`, which skips the extra load.
 
