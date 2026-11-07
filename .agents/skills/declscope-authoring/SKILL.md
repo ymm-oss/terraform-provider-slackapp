@@ -3,16 +3,18 @@ name: declscope-authoring
 description: "Write or change Go code in a repository that runs declscope, which shows as a .declscope.y*ml or baseline file, //declscope: comments, or declscope in CI. Read this before adding, naming or moving a declaration, a helper that several files use, or a test. Read it too before splitting a file, writing a //declscope: directive, or acting on a declscope diagnostic. Covers where code belongs, naming it accurately, and fixes that hide a problem."
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.24.3
-x-embedded-at: "2026-11-07T03:14:04Z"
-x-embedded-digest: "sha256:72a3d979255b4a98442850042cbb90b6b9dc073ffd4f0f7ce9ce59a832a922f7"
+x-embedded-version: 0.24.5
+x-embedded-at: "2026-11-07T23:36:40Z"
+x-embedded-digest: "sha256:dbd7552a2fdfae0c1130541f724bca163ae21c8a278c98653d1ebf122109cc64"
 ---
 
 # Writing code under declscope
 
-Written against **declscope 0.24.3**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.24.5**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 This skill is for everyday work in a repository that already runs declscope. Introducing it, choosing its configuration, and clearing the whole repository's baseline are in [declscope-adoption](../declscope-adoption/SKILL.md), installed beside this one. Changing one package whose findings are baselined, including clearing its entries, is in [Changing a package that has a baseline](#changing-a-package-that-has-a-baseline). What each directive and config key means is in [the README](https://github.com/mpyw/declscope#readme).
+
+**Read each rule with its reason.** Most rules here are defaults for a situation, and say why. When your situation differs from the one a rule was written for, follow the reason, not the wording. For example, keeping existing code in place protects a feature change from a half-done reorganization. When you can finish the reorganization, that reason is gone. The exceptions are in [Do not hide a report](#do-not-hide-a-report): they hold everywhere.
 
 ## The model
 
@@ -33,9 +35,11 @@ Which rules are on, and which config governs a package, is in [Check what is swi
 
 **A count of zero may mean nothing is checked.** The naming rule is off unless a config turns it on. Under `qualify: ondemand` it applies once a package has a second namespace. It skips exported names unless `rules.naming.exported` is on.
 
+**The naming rule asks a name to carry its file's namespace**: `loadUser` in `user.go` carries `user`. Advice in this skill that depends on the rule says "under the naming rule". When the rule is on, read [naming.md](naming.md) too, before you name a declaration or write `//declscope:namespace`. It covers how a name carries its namespace, what to do when it cannot, and vocabulary entries.
+
 ## Where a new declaration goes
 
-**Put it in the file whose concern it is.** That choice decides its namespace, so it decides who may use it and what its name must carry. The directive and the name follow from it.
+**Put it in the file whose concern it is.** That choice decides its namespace, so it decides who may use it. Under the naming rule, it also decides what the name must carry. The directive and the name follow from it.
 
 | The declaration is used by | Put it | Scope |
 | --- | --- | --- |
@@ -46,49 +50,40 @@ Which rules are on, and which config governs a package, is in [Check what is swi
 
 **A core file does not share its declarations by itself.** `//declscope:core` sets only the namespace, and exempts the file from the naming rule. Its unexported declarations are still private to the core. A core file whose declarations are shared also needs a file-level `//declscope:shared`.
 
-**Before widening, ask whether the code is in the wrong file.** A boundary report on your new use says a file reached into another namespace. Often the function you are writing belongs beside what it uses. When the declaration is shared on purpose, check that it sits in a file named for its concept before you write the directive. When you add a feature to a package whose findings are baselined, keep to its layout instead. See [Changing a package that has a baseline](#changing-a-package-that-has-a-baseline).
-
-**Do not create a file just to satisfy a name.** A new twenty-line file holding one declaration that only its old file uses is a warning sign. Rename the declaration where it was. A declaration that several parts share is different: move it, as the table above says.
+**Before widening, ask whether the code is in the wrong file.** A boundary report on your new use says a file reached into another namespace. Often the function you are writing belongs beside what it uses. When the declaration is shared on purpose, check that it sits in a file named for its concept before you write the directive. When you add a feature to a package whose findings are baselined, keep to its layout unless you can finish the restructuring. See [Changing a package that has a baseline](#changing-a-package-that-has-a-baseline).
 
 ## Changing a package that has a baseline
 
 A baseline is a file, usually `.declscope-baseline.yaml`, that records the findings a repository had when it adopted declscope. declscope does not report what it records. Only new findings fail the check: `declscope` and `declscope shrink`, as CI runs them.
 
-This section is for changing a package whose findings are recorded in a baseline. Such a package was laid out before declscope. A baseline file alone does not say that: it covers a whole repository, and a package laid out for declscope may sit beside the recorded ones. To check a package, run `declscope survey ./path/to/pkg` and read its `baselined` column. A number above zero means it applies. Searching the baseline file for the package's import path also works.
-
-In this skill, the owner is the user you are working for. Handle a proposal to the owner this way:
-
-| The situation | Do this |
-| --- | --- |
-| Your change cannot pass the check without an answer | Ask in the chat, and wait. Do not finish with a failing check, a bent name or an ignore. When nobody can answer, as in a non-interactive run, do not stop. Carry out the option you would recommend, and say in your report what you chose and why. That is still never a bent name, an ignore, or a config change other than a vocabulary entry |
-| The owner declines | Ask the owner to choose between two, and wait as above. One is a new file named in the package's convention, with its own `//declscope:namespace`. In a package that keeps a layer in one file, name it after that file, such as `parser_function_call.go`. Name the new file and its namespace in the question. A file the owner chose is not one made just to satisfy a name. The other is `//declscope:ignore qualify // <reason>` on the name. `qualify` is the naming rule's name. An ignore the owner chose is a decision |
-| Your change passes without it | Write it in your report, and finish |
+This section is for a package whose findings are recorded in a baseline. Such a package was laid out before declscope. A baseline file usually covers a whole repository, so check the package itself: `declscope survey ./path/to/pkg` shows a `baselined` count above zero.
 
 What you do depends on what you were asked:
 
 | The request | Do this |
 | --- | --- |
-| Add a feature or fix a bug, and nothing more | Keep the package's layout, as [Adding a feature](#adding-a-feature) explains |
-| Refactor some files, a part of the package, or the whole package, with or without a feature | Inside that scope, follow this skill as in a package laid out for declscope. Outside it, keep the layout. See [Refactoring a part of the package](#refactoring-a-part-of-the-package) |
-| Introduce declscope, or clear the baseline of the whole repository | Follow [declscope-adoption](../declscope-adoption/SKILL.md). Its order of work deletes the baseline file, which covers every package |
+| Add a feature or fix a bug | Keep the package's layout, or restructure what you touch when you can finish it, as [Adding a feature](#adding-a-feature) explains |
+| Refactor some files, a part of the package, or the whole package | Inside that scope, follow this skill as in a package laid out for declscope. See [Refactoring a part of the package](#refactoring-a-part-of-the-package) |
+| Clear one package's baseline | A refactoring of the whole package that fixes all its findings. See [Clearing one package's baseline](#clearing-one-packages-baseline) |
+| Introduce declscope, or clear the whole repository's baseline | Follow [declscope-adoption](../declscope-adoption/SKILL.md) |
 
-The refactoring needs a clear request from the user, such as "clean up `parser.go` while you are there" or "refactor this package". A declscope finding that a rename would silence is not one. Nor is a request to fix the reported findings, such as "fix the lint errors". When the request leaves the scope unclear, such as "tidy this up", ask which files it covers. When the user asks to refactor the whole package, the package is the scope. Fix the findings that report again. A declaration whose key did not change keeps its entry, and you mention it. A declaration whose file got a new namespace is not one of them. A request to clear one package's baseline is a refactoring of the whole package that fixes every finding of it. Its entries in the baseline file list those findings. It is done when `-merge` removes all of them. In these cases, do not delete the baseline file. When `-merge` leaves it empty, delete it.
+A request to refactor widens how far you may restructure. Read it from what the user wants changed, however it is worded: "clean up `parser.go` while you are there", "refactor this package", or "this function is hard to read". "Fix the lint errors" asks for those fixes, moves included, and no more. When the scope is unclear, such as "tidy this up", ask which files it covers.
+
+The owner is the user you are working for. When a step needs the owner's answer, ask and wait. Never finish with a failing check, a bent name or an unexplained ignore. When nobody can answer, as in a non-interactive run, [When nobody can answer](#when-nobody-can-answer) says what to do.
 
 ### Adding a feature
 
-A bug fix follows the same rules as a feature. In this skill, a feature change means either.
+A bug fix follows the same rules. **Add new code the way the package already does it.** Some packages keep a layer in one file, such as every parse function in `parser.go`. Others name files with a prefix, such as `ast_object_cons_expr.go`.
 
-The package's files may follow another plan. Some packages keep a layer in one file, such as every parse function in `parser.go`. Others follow a naming convention, such as an `ast_` prefix on each type's file. **Add new code the way the package already does it.** Reorganizing the package to suit the rules is a separate change. Propose it, and do not fold it into a feature unless the user asks. When your change happens to remove a baselined finding, leave its entry. An entry that matches nothing is harmless. Mention it in your report. [A baseline is for arriving, not for staying](../declscope-adoption/SKILL.md#a-baseline-is-for-arriving-not-for-staying) covers that work.
+**Restructure only as far as you can finish.** You may move or rename the code you touch when the result is whole. Every finding that comes back is fixed. The package does not end up mixing two conventions. The diff stays small enough to review with the feature. Renaming one `ast_*.go` file without its prefix, or moving some of `parser.go`'s parse functions but not the rest, mixes two. A half-done reorganization is worse than none. When the change would not be whole, keep the layout, and propose the reorganization instead.
 
 | The package | Do this |
 | --- | --- |
-| Names its files with a shared prefix, such as `ast_object_cons_expr.go`, and you add a new concept | Name the new file the same way. Set its namespace with `//declscope:namespace`, so the names carry it without the prefix |
-| Keeps one layer in one file, such as every parse function in `parser.go` | Put the new functions in that file. A method goes in its type's file, as [Common changes](#common-changes) says. The new names carry the file's namespace, as for any file. When no natural name carries the namespace, propose a namespace for the file, as [Fixing an existing file's namespace](#fixing-an-existing-files-namespace) explains |
-| Already has a file for the concept you add | Put the new code there, even when that file's existing declarations are baselined. Its names carry that file's namespace. When no natural name does, propose a namespace for the file, as in the row above |
+| Names its files with a shared prefix, and you add a new concept | Name the new file the same way. Under the naming rule, set its namespace with `//declscope:namespace` so the names carry it without the prefix |
+| Keeps one layer in one file | Put the new functions in that file. A method goes in its type's file, as [Common changes](#common-changes) says |
+| Already has a file for the concept you add | Put the new code there |
 
-In every row, the new code may use a private declaration of another file. When declscope reports that use, write `//declscope:shared // <who uses it>` on that declaration, such as `// parser.go builds these`. Leave the declaration where it is. When it states its own `//declscope:private`, ask the owner instead. When nobody can answer, the table at the top of this section applies. A directive a declaration states is a decision, so the option you recommend never flips it.
-
-Here is a new file for the first row. `parser.go` calls `newFunctionCallExpr`. Its test file, `ast_function_call_expr_test.go`, takes the same directive.
+Here is a new file for the first row, under the naming rule. `parser.go` calls `newFunctionCallExpr`. Its test file, `ast_function_call_expr_test.go`, takes the same directive.
 
 ```go
 // ast_function_call_expr.go
@@ -102,53 +97,78 @@ type FunctionCallExpr struct{ /* ... */ }
 func newFunctionCallExpr( /* ... */ ) *FunctionCallExpr { /* ... */ }
 ```
 
-**A namespace directive on an existing file changes its baseline keys.** A baseline entry names the declaration's namespace and the declaration's name. Renaming an existing declaration changes its key in the same way, so in a feature change, leave baselined names as they are. So `//declscope:namespace parse` on an existing `parser.go` makes every baselined finding of that file new again. Adding one to an existing file is therefore a refactoring of that file, and its findings must be fixed. On a file you create, there is no such cost.
+**A baseline key is the declaration's namespace and name.** Moving a declaration, renaming it or its file, or setting a namespace on the file changes the key. Its recorded findings come back. Fixing them is part of the move. Move or rename an existing declaration only when you can fix what comes back, as above. On a file you create, there is no such cost.
 
-#### Fixing an existing file's namespace
+When the new code uses a private declaration of another file, declscope reports it on that declaration. First ask whether the new code belongs beside it. New code costs nothing to place, so put it in that file when it does. Otherwise:
 
-Sometimes a new name cannot carry an existing file's namespace. `parseAttribute` in `parser.go` does not carry `parser`. A function in `ast_attribute.go` rarely carries `astAttribute`. Then propose to fix the file's namespace, such as `//declscope:namespace parse` on `parser.go`:
+| The declaration | Do this |
+| --- | --- |
+| Has no directive | Ask whose concept it is. When it belongs to its file's concept, such as `parseExpr` in `parser.go`, write `//declscope:shared // <who uses it>` on it and leave it. When its file was only its first caller, such as a general helper now used twice, move it to a file named for its concept. That file may exist already, or be new. Then share it. Moving it changes its baseline key, so do it only when you can finish, as above |
+| Has a bare `//declscope:private` of its own, such as `-fix` writes for `surplus` | It only records that nothing else read it yet. Delete it, and treat the declaration as in the row above |
+| Is private through a directive on its file, block or type | That decides the whole, not this declaration. Write `//declscope:shared // <who uses it>` on it as a stated exception, as the first row does |
+| Has `//declscope:private` with a reason | That is a decision. Ask the owner whether it still holds. When it no longer does, replace it with `//declscope:shared // <who uses it>`. When it does, or nobody can answer, put the new code beside it after all. When the use sits inside an existing function, an ignore with its reason is the last resort |
 
-1. Ask the owner. Say that every baselined finding of the file comes back, and that you will fix them. The check fails without the answer, so wait. When nobody can answer, the table at the top of this section applies
-2. When the owner agrees, treat that file as a refactoring the user asked for. [Refactoring a part of the package](#refactoring-a-part-of-the-package) applies to it, `-merge` included. That run also drops the package's other entries that match nothing, which is fine. The diff still only removes lines
-3. When the owner declines, go to the declined row of the table above
+When the naming rule reports that a new name cannot carry the file's namespace, see [In a package that has a baseline](naming.md#in-a-package-that-has-a-baseline).
 
-**A vocabulary entry is the exception, for a Go idiom.** Some names follow a convention that never spells the file's name. In `options.go`, the functional options `WithTimeout` and `WithRetry` carry `With`, not `options`. List that word, as in `options: [with]`. It changes no baseline keys. It applies to every package under that config, so say so when you propose it. Do not use a vocabulary entry for a name that could carry a fixed namespace, such as `parse` for `parser`.
-
-**In a feature change, do not rename files only to satisfy a report.** Dropping the prefix from a new file name does make the report go away. It also leaves the package with two ways of naming its files. Renaming the package's files is a reorganization. Do it when the user asks, as the next section explains.
+When your change happens to remove a recorded finding, its entry now matches nothing and does no harm. Drop it as [Updating the baseline](#updating-the-baseline) says, or leave it and mention it in your report.
 
 ### Refactoring a part of the package
 
-Inside the scope the user named, the package's layout no longer binds you. The goal of the refactoring decides what you change. The findings your changes bring back are yours to fix. Clearing the findings you did not touch is a separate request, even for a whole package. Apply the rest of this skill to what you change:
+Inside the scope the user named, the package's layout no longer binds you. The goal of the refactoring decides what you change. Apply the rest of this skill to what you change:
 
 - Put each declaration in a file named for its concept, and move it there when it is not
 - Rename a file whose name does not match its contents, with its test files
-- Set `//declscope:namespace` on an existing file whose name reads well but makes poor names, such as `parser.go`. Give its test files the same directive. The request is the owner's permission for the baseline keys it changes
+- When a file's name fits but its namespace makes the names awkward under the naming rule, set a better one with `//declscope:namespace`. Do the same on its test files
 - Widen only what is shared on purpose
 
-**Keep to the scope.** A file outside it keeps its name and its baselined findings, even when the same fix would apply there. Mention those files as candidates for a later change. Update their uses of what you renamed, and nothing else in them. A new file you create for a declaration in the scope is in the scope.
+**The findings that come back are the work.** Every move and rename above changes keys, so recorded findings report again. Fix them as you would a new report, and do not record them again. Keeping a declaration in place, or marking it `//declscope:shared` instead of moving it, keeps the layout the user asked you to change.
 
-**A file that receives moved code is in scope for that code only.** Keep its name, its namespace and its other declarations. Rename the moved code to carry that file's namespace. When no natural name does, leave the code where it was. Changing the receiving file's namespace would widen the scope.
+**Keep to the scope.** A file outside it keeps its name, its namespace and its recorded findings. Update its uses of what you renamed, and mention it as a candidate for a later change. Under the naming rule, code you move into such a file must carry its namespace. When no natural name does, leave the code where it was, or give it a new file. A new file is in the scope, so choose its name and namespace to fit what it receives.
 
-For example, the user asks to clean up `parser.go` in a package that names its other files `ast_*.go`. None of them has a namespace directive, so `ast_attribute.go` has the namespace `astAttribute`:
+For example, the user asks to clean up `parser.go` in a package that names its other files `ast_*.go`. None has a namespace directive, so `ast_attribute.go` has the namespace `astAttribute`:
 
 | Change | Do it? |
 | --- | --- |
-| Set `//declscope:namespace parse` on `parser.go` and `parser_test.go`, so `parseExpression` carries it | Yes, when its names read badly with `parser`. Every baselined finding of `parser.go` then comes back, and you fix them |
-| Fix the findings that come back for `parser.go`'s declarations | Yes. They are inside the scope |
-| Move `parseAttribute` into `ast_attribute.go`, beside the type it builds | Only when a natural name carries `astAttribute`, which is rare. Otherwise it stays in `parser.go` |
-| Set `//declscope:namespace attribute` on `ast_attribute.go`, so that the moved function fits | No. That changes the receiving file's namespace |
-| Rename `ast_body.go` to `body.go` | No. It is outside the scope. Mention it as a later change |
+| Set `//declscope:namespace parse` on `parser.go` and `parser_test.go`, so `parseExpression` carries it | Yes, when its names read badly with `parser`. Fix the findings that come back |
+| Move `parseAttribute` into `ast_attribute.go`, beside the type it builds | Yes without the naming rule. Under it, only when a natural name carries `astAttribute`, which is rare |
+| Set `//declscope:namespace attribute` on `ast_attribute.go`, so that the moved function fits | No. That file is outside the scope |
+| Rename `ast_body.go` to `body.go` | No. Mention it as a later change |
 
-**Fix the findings your refactoring brings back.** Moving a declaration, renaming it, or renaming its file changes its baseline keys, so its baselined findings report again. They are inside the scope, so fix them as you would a new report. Do not record them in the baseline again.
+#### When the request keeps the API
 
-Then drop the entries your refactoring settled. Run this only after `declscope ./...` and `declscope shrink ./...` both report nothing, since the baseline records `shrink`'s findings too:
+Exported names cannot be renamed then. The same holds outside `internal/` unless the request says the API may change, since importers you cannot see use those names. Where the naming rule reaches them, plan moves around their names:
+
+| Change | Do this |
+| --- | --- |
+| Move exported declarations to a new file | Choose its namespace so they carry it as they are. `RequiredParam` and `OptionalParam` move from `server.go` to `params.go` with `//declscope:namespace param` |
+| Rename a file, or set a namespace on it | First check that its exported names carry the new namespace. When they cannot, leave that file |
+| `shrink` reports an existing exported name | Keep it with `//declscope:ignore overexported // <why it stays exported>`, and mention it |
+
+#### Clearing one package's baseline
+
+Recorded findings are not reported, not even by `shrink`. To see them, move aside the baseline file that records the package, and fix the package until `declscope` and `declscope shrink` report nothing for it. The request allows changing exported names under `internal/`, unless it keeps the API. Then put the file back, and update it as below.
+
+#### Updating the baseline
+
+After a refactoring, drop the entries it settled. Run this only when `declscope` reports nothing for the package, and `declscope shrink` too where the repository runs it:
 
 ```console
-declscope baseline -merge ./path/to/pkg
+declscope baseline -merge ./path/to/pkg   # add -shrink=false where shrink does not run
 git diff -- '*baseline*'
 ```
 
-`-merge` keeps the other packages' entries. The command names each file it wrote, which may differ from `.declscope-baseline.yaml` when a config names its own. The diff should remove lines and add none. An added line is a finding recorded instead of fixed. Show the diff to the user with the change.
+The diff should remove lines and add none. An added line is a finding recorded instead of fixed. Show the diff to the user with the change. When the baseline ends up empty, delete it.
+
+### When nobody can answer
+
+In a non-interactive run, do not stop. Take the step this table gives, and say in your report what you did and why:
+
+| The step that needs an answer | Do this |
+| --- | --- |
+| The scope of a refactoring is unclear | Take the files the request names, or else the files your change touches |
+| A vocabulary entry | Add it |
+| Any other config change | Do not make it |
+| Anything else | Carry out the option you would recommend. When nothing else passes without a bent name, an ignore with its reason is the last resort |
 
 ## Common changes
 
@@ -156,66 +176,14 @@ git diff -- '*baseline*'
 | --- | --- | --- |
 | Add a method to a type, in another file | The method takes its own file's namespace. Each private field it reads is reported at the field, in the type's file | Put the method in the type's file. If the two files are one unit, give the method's file the type's namespace with `//declscope:namespace`. Do not widen the fields |
 | Add a field that another file reads | Under a `//declscope:shared` type it is shared already. With nothing stated, the use is reported | When the type is unexported and other files spell it, write `//declscope:shared` on the type. See [Shared structs: private fields](#shared-structs-private-fields). Otherwise, exported types included, write `//declscope:shared // <who reads it>` on each field that is read, however many there are |
-| Move code between files | Its namespace changes, and so does the name it must carry | Rename it, move its tests with it, and reread each `// reason` that names a file |
+| Move code between files | Its namespace changes, and under the naming rule, so does the name it must carry | Move its tests with it, and reread each `// reason` that names a file. Under the naming rule, rename it to carry the new namespace |
 | Split a file | Each new file is a new namespace, so calls between the halves are reported | Split along a real boundary. If the halves are one unit, give them one `//declscope:namespace` |
 | Export a name to get past a report | An exported name takes shared scope, so the report goes away | Do not. In `internal/`, `declscope shrink` reports it. Elsewhere it becomes public API |
 | Add a helper used only by generated code | Generated files are not read. The `surplus` rule stands down in a package holding one, so nothing is reported | Nothing to write. Never put directives in generated files, since they are not read. An ignore would silence nothing |
 
-In a package whose findings are baselined, a `//declscope:namespace` on an existing file changes its baseline keys. Outside a refactoring the user asked for, propose it instead. Moving or splitting existing code there is a refactoring too. See [Changing a package that has a baseline](#changing-a-package-that-has-a-baseline).
+In a package whose findings are baselined, a `//declscope:namespace` on an existing file, or moving or splitting existing code, changes baseline keys. Do it only when you can finish what comes back. See [Changing a package that has a baseline](#changing-a-package-that-has-a-baseline).
 
-## Naming
-
-This applies when the naming rule is on. The namespace may sit anywhere in the name, but it must start a word. Its right edge may fall inside a word: `loadUserID` carries `user`, and `poweruserID` does not.
-
-Fields, interface methods, and methods written in their type's file are exempt. A method in another file must carry that file's namespace. So do helpers in a test file. `TestXxx`, `BenchmarkXxx`, `FuzzXxx` and `ExampleXxx` in a `_test.go` file are exempt, since `go test` finds them by name.
-
-**Prefer natural word order.** With a verb namespace, a prefix reads as a command: `collectAddFunc` is an instruction, and `addFuncToCollection` is a name. An entry point is the exception, since `collectFiles` already says what it does.
-
-**A verb prefix can promise a side effect the code does not have.** A name that starts with a verb reads as that action. In `delete.go`, a function that only checks whether a user may be deleted must not be called `deleteUser`. A reader expects it to delete the user. Name it for what it does, and fit the namespace in elsewhere: `canDeleteUser`, `usersToDelete`. Keep the verb first only for code that performs the action.
-
-A verb file name is still fine. Its regular noun and past forms often carry it already, since the namespace's right edge may fall inside a word. In `collect.go`, `collectedFiles`, `collectionKeys` and `addToCollection` all carry `collect`. A form that changes the verb's spelling, such as `deletion` for `delete`, needs another fit or a vocabulary entry. The two generated forms are the exception. See [When the name spells the namespace in another form](#when-the-name-spells-the-namespace-in-another-form).
-
-### Fitting the namespace in
-
-A prefix is one fit, and often the right one: `userProfile` is a prefix. Do not use it by reflex, though. Choose the place where the namespace reads as part of the phrase:
-
-| Fit it in as | Namespace | Examples |
-| --- | --- | --- |
-| A modifier before a noun | `user` | `userProfile`, `userRow` |
-| The object after a verb | `user` | `loadUser`, `deleteUserByID` |
-| A phrase after the main word | `collect` | `addFuncToCollection` |
-| An inflected form | `collect`, `store` | `collectedFiles`, `storingKeys`, `storedKeys` |
-| A word it begins, ending inside it | `parse` | `SpecifierParser` |
-
-**Then read the name aloud.** A command (`collectAddFunc`), a stack of nouns with no grammar, or a word used against its meaning means another fit is needed. When no fit reads naturally, the name is not the problem. Suspect the file instead: see [An ill-fitting prefix means the declaration is in the wrong file](#an-ill-fitting-prefix-means-the-declaration-is-in-the-wrong-file).
-
-### Carrying the namespace does not make a name accurate
-
-The rule checks that the namespace is in the name. It cannot check that the rest of the name is true. Name the declaration for exactly what it is, then make sure the namespace is in it. Before naming a collection, read the code that fills it.
-
-| Written | Wrong because | Better |
-| --- | --- | --- |
-| `methodNames`, filled with every function | Plain functions are in it too, not only methods | `funcNames`, or fill it with methods only |
-| `collectInfo` | The namespace is the only real word, so the name says nothing | Name what it holds: `collectedFiles` |
-| `orderSortKeys` in `order.go`, read by every file | The prefix claims one owner | Move it. See the next section |
-
-When the accurate name reads badly with the namespace in it, do not bend the words. Read it as a signal about placement.
-
-### An ill-fitting prefix means the declaration is in the wrong file
-
-Sometimes the namespace a name must carry does not describe the thing. Then the declaration sits in the wrong file, and renaming it hides that.
-
-For example, a cache that two parts of a package read was placed in `surplus.go`. So it had to be called `surplusLinknamed`, and the other part's call read `c.surplusLinknamed(pass)`, as if it asked the surplus code. It belonged in the package's shared-model file, which is core and shared as a whole. There it is just `linknamed`.
-
-| The prefix you must add | Do this |
-| --- | --- |
-| Describes what the thing is | Keep it |
-| Belongs to one caller, but several parts use the thing | Move it to a file named for its concept, or to the shared-model file. A concept file often carries the name for free: `linknamed` carries `linkname` |
-| Reads badly for most names in the file | Often the file name is wrong. See [What each shape means](../declscope-adoption/SKILL.md#what-each-shape-means) |
-
-This reasoning holds in a package laid out for declscope. In a feature change to a package whose findings are baselined, the file name may follow the package's own convention instead. On a new file, keep that name and set the namespace. On an existing file, propose a namespace to the owner. [Adding a feature](#adding-a-feature) explains both.
-
-### Name a test file for the code it calls
+## Name a test file for the code it calls
 
 A test file's namespace comes from its own file name: `collect_test.go` is `collect`. So name a test file for the source file whose unexported code it calls, not for the behavior it tests. A test of ordering that calls `collect.go` goes in `collect_test.go`, not `order_test.go`.
 
@@ -229,43 +197,6 @@ The namespace does not follow the subject's `//declscope:namespace`. If `user_ex
 | Only exported names | Anywhere, including `package x_test` |
 
 **Uses only in `_test.go` files mean the test is misplaced.** Move the test. Never widen production code for a test, and never let `-fix` insert `//declscope:shared` for one.
-
-### When the name spells the namespace in another form
-
-Only the namespace's own spelling and two generated forms carry it: a final `e` dropped before `ing` (`store` → `storing`) and `y` turned to `i` (`apply` → `applies`, `applied`). Generation only makes the namespace longer. Nothing else is guessed:
-
-| File | Name | Carried | Why |
-| --- | --- | --- | --- |
-| `store.go` | `storingKeys` | Yes | A generated form |
-| `tracing.go` | `traceValue`, `tracerType` | No | The stem of an inflected file name is not derived |
-| `walking.go` | `walkSpeed` | No | Same |
-| `index.go` | `indicesSorted` | No | An irregular form |
-
-**Prefer the base form of a word for a new file name.** It is a recommendation, not a requirement. `trace.go` is carried by `traceValue`, `tracerType` and `tracingStart`. `tracing.go` is carried only by the last. Generated forms and the free right edge both run from the namespace to longer words, so the base form reaches every form the inflected file name reaches, and more. The same holds for `entry.go` over `entries.go`, `walk.go` over `walking.go`, and `user.go` over `users.go`. An inflected file name is allowed. It only fits declscope worse, so choose it when it reads clearly better.
-
-For an existing file, renaming it to the base form keeps every name that carried the old namespace. It still changes the namespace, so it is not free. Rename its test files too, and update any `//declscope:namespace` that names it and each `// reason` that names the file. Its baselined findings report again. Fix them, as [Refactoring a part of the package](#refactoring-a-part-of-the-package) explains. Do not rename an existing file only for this. Mention the rename as an option, unless the file is in a refactoring the user asked for. When it is too wide, or the owner prefers the current name, a vocabulary entry is the smaller change.
-
-`rules.naming.vocabulary` lists extra words that carry a namespace. A listed word goes through the same test as the namespace, so `trace` also covers `tracer`. When the namespace looks inflected, the diagnostic names the key: `list that form under rules.naming.vocabulary.tracing`.
-
-```yaml
-rules:
-  naming:
-    vocabulary:
-      tracing: [trace]
-      index: [indices]
-```
-
-Use it for a word that names what the namespace names: another form of it, or the domain's word for part of it (`mouse: [wheel]`). For those, the rename the message offers would stutter (`tracingTraceValue`).
-
-| The name | Do this |
-| --- | --- |
-| Spells the base form of an inflected file name | Propose a vocabulary entry, and mention renaming the file to the base form as an option |
-| Spells the namespace in another form the base form cannot reach (`indices`), or the domain's word for part of it | Propose a vocabulary entry |
-| Follows a Go idiom that never spells the file's name, such as `WithTimeout` in `options.go` | Propose a vocabulary entry: `options: [with]` |
-| Spells a different word, which describes the thing better | The file may be named wrong, or the declaration may be in the wrong file. See [An ill-fitting prefix](#an-ill-fitting-prefix-means-the-declaration-is-in-the-wrong-file) |
-| Would need a long list of words | Split the file. A long list means the file declares things it is not about |
-
-A vocabulary entry is a config change, so ask first. When nobody can answer, add it and say so in your report: it only widens what carries one namespace. List the word the name actually spells. Do not list a stem you guessed: `trac` would also carry `track`.
 
 ## Directives
 
@@ -287,7 +218,7 @@ Only the exact form `//declscope:name` is a directive: a line comment, no space 
 
 | The file or block | Write |
 | --- | --- |
-| Is shared by nature, such as a utility file or the package's shared model, and a few declarations are its internals | `//declscope:shared` on the whole, and `//declscope:private` on each of the few internals |
+| Is shared by nature, such as a utility file or the package's shared model, and a few declarations are its internals | `//declscope:shared` on the whole, and `//declscope:private // <why it stays inside>` on each of the few internals |
 | Happens to have many declarations used from other files right now | `//declscope:shared` on each of them, and nothing on the whole |
 | Has only a few declarations used from other files | `//declscope:shared` on each of those few, and nothing on the whole |
 
@@ -400,7 +331,7 @@ Where the repository's linters fix an order, such as `decorder` or `funcorder`, 
 
 Test files and generated files are out of scope. `TestXxx` functions are exported but called by nobody.
 
-**When your change moves a declaration to another reach, move the declaration too.** That is the default, for a new `//declscope:shared`, a `//declscope:private` from `surplus`, or a name `shrink` unexported. Say in your report that you moved it: the move makes the diff larger, and the owner may prefer it in place. Do not reorder declarations your change does not touch. In a feature change to a package whose findings are baselined, leave it in place and mention the move.
+**When your change moves a declaration to another reach, move the declaration too.** That is the default, for a new `//declscope:shared`, a `//declscope:private` from `surplus`, or a name `shrink` unexported. Say in your report that you moved it: the move makes the diff larger, and the owner may prefer it in place. Do not reorder declarations your change does not touch. In a file not ordered by reach, such as many laid out before declscope, leave it in place and mention the move.
 
 ## Acting on a diagnostic your change caused
 
@@ -408,11 +339,11 @@ Test files and generated files are out of scope. `TestXxx` functions are exporte
 
 | Report | First question | Usual answer |
 | --- | --- | --- |
-| `X is private to namespace "a"` (or `to the core namespace`), `but is used from namespace "b"`, or `X is declared private by ...` | Should your code live beside `X`? | Move your code beside `X`. If `X` is shared on purpose and sits in one caller's file, move it to a file named for its concept first. Then write `//declscope:shared // why` on `X`. When `X` states its own `//declscope:private`, that was a decision: move your code, and do not flip the directive. In a feature change to a baselined package, see [Adding a feature](#adding-a-feature) first |
-| `//declscope:shared on X: no use from another namespace is visible` | Did the use that justified it go away? | Delete the directive |
-| `X takes shared scope from ..., but no use ...` | Does any other file read `X`? | Accept `-fix`'s `//declscope:private` on `X`. Move `X` after the declarations of wider reach, except in a feature change to a package whose findings are baselined. See [Order by reach](#order-by-reach). When the directive is a file's or a block's, and most of its declarations get this report, it should not share the whole. Delete it, and write `//declscope:shared` on the few that other files use |
+| `X is private to namespace "a"` (or `to the core namespace`), `but is used from namespace "b"`, or `X is declared private by ...` | Should your code live beside `X`? | Move your code beside `X` when it belongs there. Otherwise act on `X`'s directive as the table in [Adding a feature](#adding-a-feature) says, with or without a baseline. Inside a refactoring the user asked for, you may change a decided one, and say why |
+| `//declscope:shared on X: no use from another namespace is visible`, or `the file's //declscope:shared: no use ...` | Did the use that justified it go away? | Delete the directive |
+| `X takes shared scope from ..., but no use ...` | Does any other file read `X`? | When the directive is a file's or a block's, and most of its declarations get this report, it should not share the whole. Delete it, and write `//declscope:shared` on the few that other files use. Otherwise accept `-fix`'s `//declscope:private` on `X`, alone: take that edit from `declscope -fix -diff`, since a whole `-fix` run also widens every boundary report. When the file is ordered by reach, move `X` after the declarations of wider reach. See [Order by reach](#order-by-reach) |
 | `unused //declscope:...` | Does the directive still change anything? | Delete it |
-| `X does not carry namespace "a"` | Is the name accurate, and is `X` in the right file? | See [Naming](#naming). Rename only when both answers are yes |
+| `X does not carry namespace "a"` | Is the name accurate, and is `X` in the right file? | See [naming.md](naming.md). Rename only when both answers are yes |
 | `X is exported, but nothing outside ... uses it` (`declscope shrink`) | Does another package really need it? | See [Reading what shrink reports](#reading-what-shrink-reports) |
 
 **`-fix` widens. It does not draw boundaries.** On a boundary report, `-fix` inserts `//declscope:shared` instead of moving code. That also leaves the declaration in its first caller's file, with that caller's prefix. Read `-fix -diff` before `-fix`. Its rename is offered only when it is proven safe, but it cannot tell whether the name was accurate.
@@ -421,30 +352,39 @@ Test files and generated files are out of scope. `TestXxx` functions are exporte
 
 `declscope shrink` reports exported declarations of `internal/` packages that nothing outside their package uses. It is a subcommand, not a rule the analyzer runs, so a clean `declscope ./...` says nothing about it.
 
+**Each report names a declaration.** Decide per name, then fix:
+
 | Report | What to do |
 | --- | --- |
-| `... uses it` and nothing more | The fix is offered. Apply it with `declscope shrink -fix <that package>` |
-| `... (no fix: <reason>)` | A use may exist that `shrink` cannot prove, or the rename is unsafe. **Do not unexport it by hand.** Read the reason first |
+| `... uses it` and nothing more | A name you added: unexport it. An existing name: unexport it when the request allows changing exported names. Otherwise keep it, as [When the request keeps the API](#when-the-request-keeps-the-api) says |
 | `... only the external tests of <pkg> use it` | Keep it exported. Add `//declscope:ignore overexported // <why>` when the tests use it on purpose |
 | `... (no fix: a build-excluded file of another package may use it)`, where that file uses it under another build tag | Keep it exported. Add `//declscope:ignore overexported // <file, behind which tag>`. One ignore passes every configuration |
-| `declscope shrink: not judged: <pkg>: <reason>` on stderr | That package was not checked. It is not clean |
-| `declscope shrink: warning: "<pattern>" matched no packages` on stderr | The pattern checked nothing. Fix the pattern, as you would for `go vet` |
-| `declscope shrink: not judged: <n> package(s) outside the main module` on stderr | The patterns named packages `shrink` never judges, such as `std`. Nothing to do |
+| Any other `... (no fix: <reason>)` | A use may exist that `shrink` cannot prove, or the rename is unsafe. Read the reason. Do not unexport an existing name by hand: add `//declscope:ignore overexported // <the reason shown>`, and mention it. For a name you added, choose another unexported name yourself |
 
-**A package not judged is not a package with nothing to report.** `shrink` stands down wherever an importer could be unseen:
+`declscope shrink -fix <pkg>` unexports every report of the package at once, except those ignored. So write the ignores for the names you keep first, then run it.
 
-- outside `internal/`, and in `package main`;
-- beside assembly or cgo;
-- under an `internal/` whose tree a nested module may import into, when that module fails to load or reads this one from elsewhere, such as a published version;
-- under an `internal/` whose tree a module of the build list may import into, when the build reads that module from elsewhere, such as a published version.
+Name the rule in each ignore: a bare `//declscope:ignore` does not reach `overexported`.
 
-A copy from elsewhere that a nested module builds keeps the reports in its range, but withholds their fixes, and the reason names the copy.
+**Some packages are not judged.** `shrink` stands down wherever an importer could be unseen. A package not judged is not a package with nothing to report.
 
-The exit status ignores those packages.
+| Where | Why |
+| --- | --- |
+| Outside `internal/`, and in `package main` | Any module may import it, or nothing can |
+| Beside assembly or cgo | Uses there are not visible |
+| Under an `internal/` that a nested module may import | The nested module fails to load, or reads this module from elsewhere, such as a published version |
+| Under an `internal/` that a module of the build list may import | The build reads that module from elsewhere, such as a published version |
 
-**The values of an enum are judged as one set.** A `const` block of 2 or more constants, all of one exported type of the package, is a set. While the type is not reported, or another package uses any of its values, no value is reported. Otherwise every value is reported with the type, and is fixed only where all of them are. A constant of the type outside such a block, such as a lone default, is judged on its own. To keep it with the set, put it in the block. A report on a block that mixes in another constant says to split the block. Do not add an ignore per value.
+When such a copy loads, the reports in its range stay, but their fixes are withheld, and the reason names the copy. The exit status ignores the packages not judged. They show on stderr:
 
-A bare `//declscope:ignore` does not reach `overexported`. Name the rule. Names written as strings, such as a template field or `reflect.Value.MethodByName`, are outside what `shrink` can see. When no interface carries the value there, add the ignore with the reason.
+| Message on stderr | What to do |
+| --- | --- |
+| `declscope shrink: not judged: <pkg>: <reason>` | That package was not checked. It is not clean |
+| `declscope shrink: warning: "<pattern>" matched no packages` | The pattern checked nothing. Fix the pattern, as you would for `go vet` |
+| `declscope shrink: not judged: <n> package(s) outside the main module` | The patterns named packages `shrink` never judges, such as `std`. Nothing to do |
+
+**The values of an enum are judged as one set.** A set is a `const` block of 2 or more constants of one exported type of the package. No value is reported while the type is not reported, or while another package uses any value. Otherwise every value is reported with the type, and fixed only where all of them are. A constant of the type outside the block, such as a lone default, is judged alone: put it in the block to keep it with the set. A report on a block that mixes in another constant says to split the block. Do not add an ignore per value.
+
+**Names written as strings are outside what `shrink` can see**, such as a template field or `reflect.Value.MethodByName`. When no interface carries the value there, add the ignore with the reason.
 
 ## Do not hide a report
 
@@ -457,7 +397,7 @@ A bare `//declscope:ignore` does not reach `overexported`. Name the rule. Names 
 | Regenerating the baseline over new findings | Records your new crossing as if it were old |
 | `//declscope:ignore` without a reason | The next reader cannot tell a decision from a shortcut |
 
-**Config changes are the owner's decision.** Ask before writing or changing one. When nobody can answer, a vocabulary entry is the only config change to make. Never change a rule's mode, the filter or the baseline path on your own.
+**Config changes are the owner's decision.** Ask before writing or changing one, and see [When nobody can answer](#when-nobody-can-answer) for a run nobody answers.
 
 ## Traps
 
@@ -469,7 +409,7 @@ A bare `//declscope:ignore` does not reach `overexported`. Name the rule. Names 
 
 ```bash
 go vet ./... && go test ./...
-declscope shrink ./...   # when the repository has internal/ packages
+declscope shrink ./...   # when the repository runs it
 declscope ./...
 ```
 

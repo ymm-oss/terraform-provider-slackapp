@@ -3,14 +3,14 @@ name: declscope-adoption
 description: Adopt declscope on an existing Go codebase and drive its diagnostics to zero. Read this when introducing declscope to a repository, when choosing its configuration, when running declscope shrink for the first time, or when clearing a declscope baseline. Covers sizing each rule before enabling it, reading the diagnostics as structure, the remedy for each shape, and the measurement traps that produce false confidence. For writing new code in a repository that already runs declscope, use declscope-authoring.
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.24.3
-x-embedded-at: "2026-11-07T03:14:04Z"
-x-embedded-digest: "sha256:f99d90326a7db71fe55758c24a93d49bd45e47414a9d23156700813056a15885"
+x-embedded-version: 0.24.5
+x-embedded-at: "2026-11-07T23:36:40Z"
+x-embedded-digest: "sha256:0955789ee74efd12313b4a135cfd06738c01c6d91372063b6bfd491975a90144"
 ---
 
 # Adopting declscope
 
-Written against **declscope 0.24.3**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.24.5**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 **Read [the README](https://github.com/mpyw/declscope#readme) before the first decision.** This skill covers what to do about the diagnostics. What each directive means, and what the config accepts, is there.
 
@@ -52,9 +52,9 @@ Each file's patterns are read against **its own** directory, and anchor there wh
 
 ### Start at the default, and offer the rest
 
-**Ask before any config change**, as [declscope-authoring](../declscope-authoring/SKILL.md#do-not-hide-a-report) says. That includes the first config file. Wait for an answer before changing any code, too.
+**When introducing declscope, ask before any config change**, as [declscope-authoring](../declscope-authoring/SKILL.md#do-not-hide-a-report) says. That includes the first config file. Wait for an answer before changing code for the adoption, too.
 
-**When nobody can answer, as in a non-interactive run, do not wait.** Adopt the minimum below, with no config file, and make the changes this skill describes. Say in your report what you chose, and which settings the owner may still want to switch on.
+**When nobody can answer, as in a non-interactive run, do not wait.** Keep any config the repository has. Add no config file and change no setting, except a vocabulary entry. Follow the [order of work](#order-of-work), which stops at a baseline unless the request is to clear the findings. Report which settings the owner may still want.
 
 **The minimum is no config file at all.** `boundary`, `surplus: strict` and `unused: strict` are on. They check reach and whether directives still change anything; the naming rule checks a convention. Adopting this much is a complete adoption.
 
@@ -100,7 +100,7 @@ for q in never ondemand always; do
 done
 ```
 
-Some reports will be names that spell the namespace in another form, such as `traceValue` in `tracing.go`. The message names a `rules.naming.vocabulary` key for those. Propose the entries in the same question as the naming rule, and do not count them as renames. When to list a word and when to move code instead is in [When the name spells the namespace in another form](../declscope-authoring/SKILL.md#when-the-name-spells-the-namespace-in-another-form).
+Some reports will be names that spell the namespace in another form, such as `traceValue` in `tracing.go`. The message names a `rules.naming.vocabulary` key for those. Propose the entries in the same question as the naming rule, and do not count them as renames. When to list a word and when to move code instead is in [When the name spells the namespace in another form](../declscope-authoring/naming.md#when-the-name-spells-the-namespace-in-another-form).
 
 Every count in the rest of this skill assumes `qualify: ondemand` with `exported: true`. That is what the numbers were taken under, not a recommendation.
 
@@ -124,15 +124,15 @@ This happened when declscope held itself to `shrink`. The fix unexported twelve 
 | 4. Read what the analyzer now reports | `declscope ./...` |
 | 5. State or move each new crossing | See [What each shape means](#what-each-shape-means) |
 
-Ask before step 2, the same as any other change. When nobody can answer, apply the fix if the request allows changing exported names, as a request to clear the findings or to refactor does. `shrink` judges only under `internal/`, so no importer outside the module breaks. Otherwise, baseline what it reports, as the next paragraph says. The fix renames every identifier naming the declaration, all inside its own package, and the doc comment that opens with the name.
+Ask before step 2, the same as any other change. When nobody can answer, apply it if the request allows changing exported names under `internal/`. A request to clear the findings does, unless it keeps the API. When it keeps the API, keep each name as [When the request keeps the API](../declscope-authoring/SKILL.md#when-the-request-keeps-the-api) says. Without a request to clear the findings, baseline them, as the next paragraph says. The fix renames every identifier naming the declaration, all inside its own package, and the doc comment that opens with the name.
 
-**When the owner cannot settle `shrink` yet, baseline it.** `declscope baseline ./...` records `shrink`'s reports with the analyzer's, and `shrink` then passes on them in CI. It is the same deferral as any baseline, and [the same rules](#a-baseline-is-for-arriving-not-for-staying) apply. A repository that does not run `shrink` passes `-shrink=false`, which skips the extra load.
+**Without a request to clear the findings, baseline an unsettled `shrink`.** `declscope baseline ./...` records its reports with the analyzer's. `shrink` then passes on them in CI. It is the same deferral as any baseline, and [the same rules](#a-baseline-is-for-arriving-not-for-staying) apply. A repository that does not run `shrink` passes `-shrink=false`, which skips the extra load.
 
 ### Reading what it reports
 
 What each report asks of you, and where `shrink` stands down, is in [Reading what shrink reports](../declscope-authoring/SKILL.md#reading-what-shrink-reports). It is not a rule the analyzer runs, so `go vet` and golangci-lint never report it.
 
-**Deleting unused code is not `shrink`'s job.** Once a declaration is unexported, staticcheck's `unused` and gopls' `unusedfunc` report it when nothing uses it. Run them after `shrink`, not before.
+**Deleting unused code is not `shrink`'s job.** Once a declaration is unexported, a dead-code check finds it when nothing uses it. Use the one the repository already runs, usually the `unused` linter of golangci-lint, and run it after `shrink`. When the repository runs none, name staticcheck's `unused` or gopls' `unusedfunc` in your report instead of installing one.
 
 ### Keep it in CI
 
@@ -228,23 +228,17 @@ A baselined finding counts toward it: the baseline defers a decision rather than
 
 ## What each shape means
 
-| The diagnostics say | The code is | Do this |
-| --- | --- | --- |
-| File A's declarations are nearly all used from B, and nothing goes back | A is B's working parts, not a layer under it | `//declscope:namespace <B>` on A |
-| A and B reference each other both ways | One device split across two files | Give both the same namespace and rename to say so |
-| A type's fields are read from four files | One type filed by concern | The files share a namespace, or join the core |
-| Calls run one way through three files | A pipeline, and the layers are real | Keep the files. Declare only what crosses, with the reason |
-| `pkg.Foo` is asked to become `pkg.PkgFoo` | The file is the package's API | `//declscope:core` |
-| One helper is used from several files | Shared on purpose | Move it to a file named for its concept, then `//declscope:shared // why`. See [Where a new declaration goes](../declscope-authoring/SKILL.md#where-a-new-declaration-goes) |
-| A name reads badly with its namespace in it | Often the file name, not the declaration | Rename the file |
+A cluster of boundary findings shows where the file boundaries disagree with the code. Ask whether the files are one unit or two. Two files that reach into each other are one unit. So is a file whose internals another file uses almost whole. Give them one namespace, and rename to say so. A file with a concept of its own, such as `retry.go`, is a layer, even when one file uses all of it. Keep it, and share what crosses with the reason. The direction of the calls does not decide it.
 
-**Two rows can fire on one cluster.** A mutual pair whose declarations four other namespaces also read matches both the second row and the third. Take the one with the larger `clears`. Merging two namespaces settles only what no third namespace reaches. So the fan-in case is usually the smaller change, and the core case the larger.
+A type whose fields many files read is the package's shared model: those files share its namespace, or it joins the core. A file whose names are the package's API, such as `pkg.Foo` asked to become `pkg.PkgFoo`, is `//declscope:core`.
 
-That last row is worth its own note. In one repository a single file held three concerns, and splitting it into three cleared every entry in that cluster **without renaming a single declaration**. The file name was the thing that was wrong.
+**A cluster can fit both.** A pair that reaches into each other, whose declarations other namespaces also read, can be merged or made the shared model. Take the one with the larger `clears`. Merging two namespaces settles only what no third namespace reaches.
+
+**Sometimes the file is what is wrong.** In one repository a single file held three concerns. Splitting it into three cleared every entry in that cluster **without renaming a single declaration**.
 
 ## Scopes and names of single declarations
 
-Once the structure is settled, what is left is per declaration. Field scopes are in [Shared structs](../declscope-authoring/SKILL.md#shared-structs-private-fields), and names in [Naming](../declscope-authoring/SKILL.md#naming). During an adoption, one `declscope -fix` run under `surplus: strict` adds every field directive the structs need. Moving those fields to the end stays manual.
+Once the structure is settled, what is left is per declaration. Field scopes are in [Shared structs](../declscope-authoring/SKILL.md#shared-structs-private-fields), and names in [Naming](../declscope-authoring/naming.md). During an adoption, one `declscope -fix` run under `surplus: strict` adds every field directive the structs need. Moving those fields to the end stays manual.
 
 ## Do not turn the check off
 
@@ -280,7 +274,7 @@ These cost real time. Each was measured, not guessed.
 
 **A zero from `boundary` may be the switch, not the code.** `rules.boundary: off` silences the rule entirely, and the run looks like a clean repository. Read every config before reporting a count, the same way you would for `qualify`.
 
-**`-fix` widens**, as [declscope-authoring](../declscope-authoring/SKILL.md#acting-on-a-diagnostic-your-change-caused) explains. Over a whole codebase that is the wholesale widening step 3 of the order of work exists to avoid. In an adoption, use it only for renames after the structure is settled, where `names[].fixable` is true.
+**`-fix` widens**, as [declscope-authoring](../declscope-authoring/SKILL.md#acting-on-a-diagnostic-your-change-caused) explains. Over a whole codebase that is the wholesale widening step 3 of the order of work exists to avoid. In an adoption, run it only after step 3 has cleared `boundary`. Then it inserts or deletes the `surplus` and `unused` directives, and makes the renames where `names[].fixable` is true.
 
 **A dirty working tree poisons a comparison.** Measuring option A, then option B without reverting, measures A and B together. `git stash` leaves untracked files behind, so a new file from the previous attempt stays. Copy the tree instead:
 
@@ -290,11 +284,11 @@ cp -r repo /tmp/try-a   # and measure there
 
 ## Order of work
 
-1. `declscope survey ./...`, and read Checks in force before any count
+1. `declscope survey ./...`, and read Checks in force before any count. Without a request to clear the findings, record a baseline here and stop. With one, move any existing baseline aside: it hides every finding it records
 2. If the repository has `internal/` packages, run `declscope shrink ./...` and settle it before anything else. Its fixes add boundary reports, and nothing that follows adds reports back
 3. Clear `boundary` by moving the boundary, not by widening everything
 4. Re-measure with `survey`. Naming often falls with it, since merging two namespaces into one takes `ondemand` out of force
 5. Fix the file names that do not match their contents
-6. Rename what is left, following [Naming](../declscope-authoring/SKILL.md#naming)
-7. Delete the baseline
+6. Rename what is left, following [Naming](../declscope-authoring/naming.md)
+7. Delete the baseline. When findings remain, put it back, record only those with `declscope baseline ./...`, and report them
 8. Check the core count, and `go vet`, `go test`, `declscope shrink` and `declscope` in that order
