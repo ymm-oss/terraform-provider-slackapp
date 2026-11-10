@@ -3,14 +3,14 @@ name: declscope-authoring
 description: "Write or change Go code in a repository that runs declscope, which shows as a .declscope.y*ml or baseline file, //declscope: comments, or declscope in CI. Read this before adding, naming or moving a declaration, a helper that several files use, or a test. Read it too before splitting a file, writing a //declscope: directive, or acting on a declscope diagnostic. Covers where code belongs, naming it accurately, and fixes that hide a problem."
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.24.5
-x-embedded-at: "2026-11-07T23:36:40Z"
-x-embedded-digest: "sha256:dbd7552a2fdfae0c1130541f724bca163ae21c8a278c98653d1ebf122109cc64"
+x-embedded-version: 0.25.0
+x-embedded-at: "2026-11-10T14:50:10Z"
+x-embedded-digest: "sha256:b0380c5d8da51087605f258f66a87fcc3131406996d7c95457996ca607f83831"
 ---
 
 # Writing code under declscope
 
-Written against **declscope 0.24.5**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.25.0**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 This skill is for everyday work in a repository that already runs declscope. Introducing it, choosing its configuration, and clearing the whole repository's baseline are in [declscope-adoption](../declscope-adoption/SKILL.md), installed beside this one. Changing one package whose findings are baselined, including clearing its entries, is in [Changing a package that has a baseline](#changing-a-package-that-has-a-baseline). What each directive and config key means is in [the README](https://github.com/mpyw/declscope#readme).
 
@@ -343,10 +343,22 @@ Test files and generated files are out of scope. `TestXxx` functions are exporte
 | `//declscope:shared on X: no use from another namespace is visible`, or `the file's //declscope:shared: no use ...` | Did the use that justified it go away? | Delete the directive |
 | `X takes shared scope from ..., but no use ...` | Does any other file read `X`? | When the directive is a file's or a block's, and most of its declarations get this report, it should not share the whole. Delete it, and write `//declscope:shared` on the few that other files use. Otherwise accept `-fix`'s `//declscope:private` on `X`, alone: take that edit from `declscope -fix -diff`, since a whole `-fix` run also widens every boundary report. When the file is ordered by reach, move `X` after the declarations of wider reach. See [Order by reach](#order-by-reach) |
 | `unused //declscope:...` | Does the directive still change anything? | Delete it |
-| `X does not carry namespace "a"` | Is the name accurate, and is `X` in the right file? | See [naming.md](naming.md). Rename only when both answers are yes |
+| `X does not carry namespace "a"` | Is the name accurate, and is `X` in the right file? | See [naming.md](naming.md). Rename only when both answers are yes. The name the message suggests is one option, not the answer. See [When `-fix` renames](#when--fix-renames) |
 | `X is exported, but nothing outside ... uses it` (`declscope shrink`) | Does another package really need it? | See [Reading what shrink reports](#reading-what-shrink-reports) |
 
-**`-fix` widens. It does not draw boundaries.** On a boundary report, `-fix` inserts `//declscope:shared` instead of moving code. That also leaves the declaration in its first caller's file, with that caller's prefix. Read `-fix -diff` before `-fix`. Its rename is offered only when it is proven safe, but it cannot tell whether the name was accurate.
+**`-fix` widens. It does not draw boundaries.** On a boundary report, `-fix` inserts `//declscope:shared` instead of moving code. That also leaves the declaration in its first caller's file, with that caller's prefix. Read `-fix -diff` before `-fix`. It renames only under `rules.naming.fix: true`. See [When `-fix` renames](#when--fix-renames).
+
+### When `-fix` renames
+
+With `rules.naming.fix: true`, `-fix` renames every reported name at once. Do not apply it wholesale. The rename is proven safe, but nothing checks that the new name is accurate or that the file is right.
+
+| Step | Do this |
+| --- | --- |
+| 1 | Read `declscope -fix -diff` |
+| 2 | Judge each rename by [naming.md](naming.md). Is the name accurate? Is the declaration in the right file? |
+| 3 | Take only the edits you accept. Name or move the rest yourself |
+
+The name the message suggests is one option, not the answer. Without the key, the report carries no fix, and you choose the name.
 
 ### Reading what shrink reports
 
