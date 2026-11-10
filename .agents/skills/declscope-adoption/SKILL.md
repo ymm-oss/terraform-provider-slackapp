@@ -3,14 +3,14 @@ name: declscope-adoption
 description: Adopt declscope on an existing Go codebase and drive its diagnostics to zero. Read this when introducing declscope to a repository, when choosing its configuration, when running declscope shrink for the first time, or when clearing a declscope baseline. Covers sizing each rule before enabling it, reading the diagnostics as structure, the remedy for each shape, and the measurement traps that produce false confidence. For writing new code in a repository that already runs declscope, use declscope-authoring.
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.24.5
-x-embedded-at: "2026-11-07T23:36:40Z"
-x-embedded-digest: "sha256:0955789ee74efd12313b4a135cfd06738c01c6d91372063b6bfd491975a90144"
+x-embedded-version: 0.25.0
+x-embedded-at: "2026-11-10T14:50:10Z"
+x-embedded-digest: "sha256:7866c510017aff2bf117604ed4d1ce2dcdbb500d1fd20f099247883da587e377"
 ---
 
 # Adopting declscope
 
-Written against **declscope 0.24.5**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.25.0**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 **Read [the README](https://github.com/mpyw/declscope#readme) before the first decision.** This skill covers what to do about the diagnostics. What each directive means, and what the config accepts, is there.
 
@@ -189,7 +189,7 @@ Do **not** move the baseline aside to measure: `survey` reports `baselined` as i
 | Is this deferred or decided | `boundary.baselined` against `boundary.declared` |
 | Which two namespaces to merge | `inspect`'s `crossings[]`, one row per ordered pair, with `clears` |
 | Where the structure is | `inspect`'s `edges[]`, one row per declaration **and reaching namespace** |
-| Where a name is wrong | `inspect`'s `names[]`, with `fixable` saying whether `-fix` would rename it |
+| Where a name is wrong | `inspect`'s `names[]`, with `fixable` saying whether the rename is safe. `-fix` makes it only under `rules.naming.fix: true`, which `checks.configs[].rules.fix` reports |
 
 **`clears` is the number the decision turns on.** A crossing's `reached` says how much of a namespace it touches. `clears` says how many findings would go away if the two became one namespace. It is smaller whenever a third namespace reaches the same declaration. Rank the work by `clears`, not by `reached` or `uses`.
 
@@ -274,7 +274,7 @@ These cost real time. Each was measured, not guessed.
 
 **A zero from `boundary` may be the switch, not the code.** `rules.boundary: off` silences the rule entirely, and the run looks like a clean repository. Read every config before reporting a count, the same way you would for `qualify`.
 
-**`-fix` widens**, as [declscope-authoring](../declscope-authoring/SKILL.md#acting-on-a-diagnostic-your-change-caused) explains. Over a whole codebase that is the wholesale widening step 3 of the order of work exists to avoid. In an adoption, run it only after step 3 has cleared `boundary`. Then it inserts or deletes the `surplus` and `unused` directives, and makes the renames where `names[].fixable` is true.
+**`-fix` widens**, as [declscope-authoring](../declscope-authoring/SKILL.md#acting-on-a-diagnostic-your-change-caused) explains. Over a whole codebase that is the wholesale widening step 3 of the order of work exists to avoid. In an adoption, run it only after step 3 has cleared `boundary`. Then it inserts or deletes the `surplus` and `unused` directives. It renames only in a repository that sets `rules.naming.fix: true`. Do not set it in an adoption to rename in bulk. Rename by reading each name, as [When `-fix` renames](../declscope-authoring/SKILL.md#when--fix-renames) explains.
 
 **A dirty working tree poisons a comparison.** Measuring option A, then option B without reverting, measures A and B together. `git stash` leaves untracked files behind, so a new file from the previous attempt stays. Copy the tree instead:
 

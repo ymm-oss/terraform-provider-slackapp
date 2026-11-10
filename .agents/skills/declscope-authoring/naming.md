@@ -8,6 +8,14 @@ Fields, interface methods, and methods written in their type's file are exempt. 
 
 **A verb prefix can promise a side effect the code does not have.** A name that starts with a verb reads as that action. In `delete.go`, a function that only checks whether a user may be deleted must not be called `deleteUser`. A reader expects it to delete the user. Name it for what it does, and fit the namespace in elsewhere: `canDeleteUser`, `usersToDelete`. Keep the verb first only for code that performs the action.
 
+The same holds in a file named for a verb, such as `load.go` or `rename.go`. A helper there that does not perform the verb must not start with it. `loadIsAnalyzable` and `renameAsk` read as actions they do not take. Each fit below has a condition. Do not use one to dodge the rule.
+
+| Fit | Example | Only when |
+| --- | --- | --- |
+| An inflected form | `loadedPackages`, `renamedNames` | The name describes a result of the verb |
+| A method of the type it works on, in that type's file | `(p *pkg) analyzable()` | It really is that type's operation. Do not invent a receiver |
+| A closure inside its only caller | `ask := func(...)` inside `renameFix` | There is exactly one caller. A second caller needs a real name |
+
 A verb file name is still fine. Its regular noun and past forms often carry it already, since the namespace's right edge may fall inside a word. In `collect.go`, `collectedFiles`, `collectionKeys` and `addToCollection` all carry `collect`. A form that changes the verb's spelling, such as `deletion` for `delete`, needs another fit or a vocabulary entry. The two generated forms are the exception. See [When the name spells the namespace in another form](#when-the-name-spells-the-namespace-in-another-form).
 
 ## Fitting the namespace in
@@ -33,12 +41,15 @@ The rule checks that the namespace is in the name. It cannot check that the rest
 | `methodNames`, filled with every function | Plain functions are in it too, not only methods | `funcNames`, or fill it with methods only |
 | `collectInfo` | The namespace is the only real word, so the name says nothing | Name what it holds: `collectedFiles` |
 | `orderSortKeys` in `order.go`, read by every file | The prefix claims one owner | Move it. See the next section |
+| `surplusCarried`, a function that records a carrier | It reads as a predicate or an adjective. Beside a real predicate such as `surplusEnclosed`, a reader takes it for one | Name it as a writer: `markSurplusCarrier`, `addSurplusCarrier` |
 
 When the accurate name reads badly with the namespace in it, do not bend the words. Read it as a signal about placement.
 
 ## An ill-fitting prefix means the declaration is in the wrong file
 
 Sometimes the namespace a name must carry does not describe the thing. Then the declaration sits in the wrong file, and renaming it hides that.
+
+The rename a report suggests is one option. Before you take it, ask whether the declaration belongs in this file. If it does not, move it. In the right file, the name often needs no change.
 
 For example, a tax rate table that `invoice.go` and `refund.go` both read was placed in `invoice.go`. So it had to be called `invoiceTaxRates`, and `refund.go` read `invoiceTaxRates` as if it borrowed something of the invoice's. It belongs in `tax.go`, where it is just `taxRates`.
 
@@ -49,6 +60,10 @@ For example, a tax rate table that `invoice.go` and `refund.go` both read was pl
 | Reads badly for most names in the file | Often the file name is wrong. See [Reading a saturation](../declscope-adoption/SKILL.md#reading-a-saturation) |
 
 This reasoning holds in a package laid out for declscope. In a feature change to a package whose findings are baselined, the file name may follow the package's own convention instead. On a new file, keep that name and set the namespace. On an existing file, set one when you can finish what it brings back. [Adding a feature](SKILL.md#adding-a-feature) explains both.
+
+**Do not copy a helper under your file's prefix.** The naming rule makes a copy feel easier than sharing. When another file already has the helper, move that one helper to the core or the shared-model file. Every file then calls it. In one package, a check for "used from another namespace" had grown four copies under four prefixes.
+
+**Do not write a wrapper only to carry a namespace.** A one-line function such as `orderTotalOf(o)`, which only returns `o.total`, adds a name and hides the read. Read the field directly.
 
 **Do not create a file just to satisfy a name.** A new twenty-line file holding one declaration that only its old file uses is a warning sign. Rename the declaration where it was. A new file for new code, named in the package's convention, is another matter. A declaration that several parts share is different: move it, as the table above says.
 
@@ -77,7 +92,7 @@ rules:
       index: [indices]
 ```
 
-Use it for a word that names what the namespace names: another form of it, or the domain's word for part of it (`mouse: [wheel]`). For those, the rename the message offers would stutter (`tracingTraceValue`).
+Use it for a word that names what the namespace names: another form of it, or the domain's word for part of it (`mouse: [wheel]`). For those, the rename the message suggests would stutter (`tracingTraceValue`).
 
 | The name | Do this |
 | --- | --- |
