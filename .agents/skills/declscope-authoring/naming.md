@@ -56,12 +56,12 @@ For example, a tax rate table that `invoice.go` and `refund.go` both read was pl
 | The prefix you must add | Do this |
 | --- | --- |
 | Describes what the thing is | Keep it |
-| Belongs to one caller, but several parts use the thing | Move it to a file named for its concept, or to the shared-model file. A concept file often carries the name for free: `taxRates` carries `tax` |
+| Belongs to one caller, but several parts use the thing | Move it to a file named for its concept. A concept file often carries the name for free: `taxRates` carries `tax`. Do not move it to the core only to drop the prefix. The core is for the model most files read |
 | Reads badly for most names in the file | Often the file name is wrong. See [Reading a saturation](../declscope-adoption/SKILL.md#reading-a-saturation) |
 
 This reasoning holds in a package laid out for declscope. In a feature change to a package whose findings are baselined, the file name may follow the package's own convention instead. On a new file, keep that name and set the namespace. On an existing file, set one when you can finish what it brings back. [Adding a feature](SKILL.md#adding-a-feature) explains both.
 
-**Do not copy a helper under your file's prefix.** The naming rule makes a copy feel easier than sharing. When another file already has the helper, move that one helper to the core or the shared-model file. Every file then calls it. In one package, a check for "used from another namespace" had grown four copies under four prefixes.
+**Do not copy a helper under your file's prefix.** The naming rule makes a copy feel easier than sharing. When another file already has the helper, move that one helper to a file named for its concept, or make it a method of the type it reads, and share it. Every file then calls it. In one package, a check for "used from another namespace" had grown four copies under four prefixes.
 
 **Do not write a wrapper only to carry a namespace.** A one-line function such as `orderTotalOf(o)`, which only returns `o.total`, adds a name and hides the read. Read the field directly.
 
@@ -91,6 +91,8 @@ rules:
       tracing: [trace]
       index: [indices]
 ```
+
+A key names a namespace the way a file name does, in any case: for `user_id.go`, `user_id` and `userID` both work. Write only one of them in a file, or the config is an error.
 
 Use it for a word that names what the namespace names: another form of it, or the domain's word for part of it (`mouse: [wheel]`). For those, the rename the message suggests would stutter (`tracingTraceValue`).
 
