@@ -3,14 +3,14 @@ name: declscope-authoring
 description: "Write or change Go code in a repository that runs declscope, which shows as a .declscope.y*ml or baseline file, //declscope: comments, or declscope in CI. Read this before adding, naming or moving a declaration, a helper that several files use, or a test. Read it too before splitting a file, writing a //declscope: directive, or acting on a declscope diagnostic. Covers where code belongs, naming it accurately, and fixes that hide a problem."
 license: MIT
 x-embedded-by: declscope
-x-embedded-version: 0.25.0
-x-embedded-at: "2026-11-10T14:50:10Z"
-x-embedded-digest: "sha256:b0380c5d8da51087605f258f66a87fcc3131406996d7c95457996ca607f83831"
+x-embedded-version: 0.26.0
+x-embedded-at: "2026-11-24T17:49:26Z"
+x-embedded-digest: "sha256:0aba51af437f4b09cadabdcde1a1cfb60e77f03cfc010b1d368d50ff33bab138"
 ---
 
 # Writing code under declscope
 
-Written against **declscope 0.25.0**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
+Written against **declscope 0.26.0**. Check the version first with `declscope -V=full`: this describes how that release behaves, not how an older one does.
 
 This skill is for everyday work in a repository that already runs declscope. Introducing it, choosing its configuration, and clearing the whole repository's baseline are in [declscope-adoption](../declscope-adoption/SKILL.md), installed beside this one. Changing one package whose findings are baselined, including clearing its entries, is in [Changing a package that has a baseline](#changing-a-package-that-has-a-baseline). What each directive and config key means is in [the README](https://github.com/mpyw/declscope#readme).
 
@@ -212,6 +212,8 @@ Only the exact form `//declscope:name` is a directive: a line comment, no space 
 
 **Write the reason after `//`.** `//declscope:shared // rename.go reads it` and `//declscope:ignore boundary // why` are directives with reasons. Any other text after the name is read as an argument. `//declscope:ignore boundary because ...` is reported as an unknown rule.
 
+**Say who reads it in the reason.** When a few files read the declaration, name them: `// rename.go and surplus.go read it`. That tells the next reader where to look. When most files read it, or the set keeps changing, say its role instead: `// the model every stage reads`. A list of files that is always out of date is worse than no list. A reason that names files must be reread when code moves, as [Common changes](#common-changes) says.
+
 **A directive records a decision.** Write one only when it changes something, and say why. Under the default `unused: strict`, a directive that restates the scope already in force is reported.
 
 **Share a whole file only when the file exists to be shared.** A directive on a file or a block reaches everything inside it. Each exception then needs a directive of its own. A file-level `//declscope:shared` also makes every new declaration in the file start shared. So it should describe what the file is, not who happens to use it today.
@@ -358,6 +360,8 @@ With `rules.naming.fix: true`, `-fix` renames every reported name at once. Do no
 | 2 | Judge each rename by [naming.md](naming.md). Is the name accurate? Is the declaration in the right file? |
 | 3 | Take only the edits you accept. Name or move the rest yourself |
 
+`-fix` does not rename a declaration whose name the baseline records, or a type whose members it records. The rename would change the key, and the recorded findings would come back. Rename it yourself only when you can fix what comes back, as [Changing a package that has a baseline](#changing-a-package-that-has-a-baseline) says.
+
 The name the message suggests is one option, not the answer. Without the key, the report carries no fix, and you choose the name.
 
 ### Reading what shrink reports
@@ -371,6 +375,7 @@ The name the message suggests is one option, not the answer. Without the key, th
 | `... uses it` and nothing more | A name you added: unexport it. An existing name: unexport it when the request allows changing exported names. Otherwise keep it, as [When the request keeps the API](#when-the-request-keeps-the-api) says |
 | `... only the external tests of <pkg> use it` | Keep it exported. Add `//declscope:ignore overexported // <why>` when the tests use it on purpose |
 | `... (no fix: a build-excluded file of another package may use it)`, where that file uses it under another build tag | Keep it exported. Add `//declscope:ignore overexported // <file, behind which tag>`. One ignore passes every configuration |
+| `... (no fix: the baseline records it)` or `... (no fix: the baseline records a member of it)` | The baseline records the name, so unexporting it would bring back what it records. Keep it, unless you are [clearing the package's baseline](#clearing-one-packages-baseline). Then unexport it by hand and fix what comes back |
 | Any other `... (no fix: <reason>)` | A use may exist that `shrink` cannot prove, or the rename is unsafe. Read the reason. Do not unexport an existing name by hand: add `//declscope:ignore overexported // <the reason shown>`, and mention it. For a name you added, choose another unexported name yourself |
 
 `declscope shrink -fix <pkg>` unexports every report of the package at once, except those ignored. So write the ignores for the names you keep first, then run it.
